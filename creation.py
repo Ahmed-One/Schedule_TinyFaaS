@@ -8,9 +8,9 @@ import numpy as np
 # 0: start, 1: inits, 2: train, 3: load, 4:end
 names_funs = ['start', 'inits', 'train', 'load', 'end']
 start_ends = [0, 4]
-funs_cloud = [2]
-times = [0, 2, 8, 3, 0]
-rams = [0, 3, 12, 2, 0]
+funs_cloud = [2]  # index of functions that must be run on cloud
+times = [0, 3, 8, 4, 0]
+rams = [0, 2, 12, 3, 0]
 num_funs = len(times)
 
 # TinyFaaS nodes (2-nodes/workflows)

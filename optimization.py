@@ -31,17 +31,14 @@ for workflow in range(num_tiny):
 w_1, w_2 = 0.5, 0.3  # w1 for latency and time, w2 for costs
 obj = w_1 * (obj_latency + obj_time) + w_2 * (obj_transfer + obj_ram)
 
-## Constraints
+# Constraints
 
 # start and end functions should be assigned to TinyFaaS nodes
 # P_n,(0,5,7),n = 1 for all n else 0
 for workflow in range(num_tiny):
-    for node in range(num_nodes):
-        for function in start_ends:
-            if node < num_tiny:
-                # model.addConstr(P[workflow, function, node] - 1 == 0)
-                pass
-            else:
+    for function in start_ends:
+        for node in range(num_nodes):
+            if node >= num_tiny:
                 model.addConstr(P[workflow, function, node] == 0)
 
 # training functions can not be executed in local nodes
@@ -58,9 +55,10 @@ for workflow in range(num_tiny):
                                  for function in range(num_funs)) <= ram_limits[node])
 
 # each function can only be assigned to a single node
+#
 for workflow in range(num_tiny):
-    for node in range(num_nodes):
-        model.addConstr(quicksum(P[workflow, function, node] for function in range(num_funs)) == 1)
+    for function in range(num_funs):
+        model.addConstr(quicksum(P[workflow, function, node] for node in range(num_nodes)) == 1)
 
 # Solve model
 model.setObjective(obj, GRB.MINIMIZE)
