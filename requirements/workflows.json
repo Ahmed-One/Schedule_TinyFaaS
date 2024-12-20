@@ -1,0 +1,143 @@
+{
+  "workflow-TinyFaaS": {
+    "count": 1,
+    "functions": {
+      "start": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "online-mpc": {
+        "location": "local",
+        "time": 1,
+        "data": 1,
+        "size": 0.5,
+        "count": 1
+      },
+      "generate_init_samples": {
+        "location": "any",
+        "time": 3,
+        "data": 2,
+        "size": 2,
+        "count": 1
+      },
+      "generate_samples": {
+        "location": "any",
+        "time": 1,
+        "data": 1,
+        "size": 0.5,
+        "count": 100
+      },
+      "train_on_data": {
+        "location": "cloud",
+        "time": 4,
+        "data": 3,
+        "size": 3,
+        "count": 1
+      },
+      "end-training": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "control": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "end-control": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      }
+    }
+  },
+  "workflow-test0": {
+    "count": 1,
+    "functions": {
+      "start": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "generate_init_samples": {
+        "location": "any",
+        "time": 3,
+        "data": 2,
+        "size": 2,
+        "count": 1
+      },
+      "generate_samples": {
+        "location": "any",
+        "time": 8,
+        "data": 12,
+        "size": 1,
+        "count": 20
+      },
+      "train_on_data": {
+        "location": "cloud",
+        "time": 4,
+        "data": 3,
+        "size": 3,
+        "count": 1
+      },
+      "end": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      }
+    }
+  },
+  "workflow-test1": {
+    "count": 1,
+    "functions": {
+      "start": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "generate_init_samples": {
+        "location": "any",
+        "time": 2,
+        "data": 2,
+        "size": 1,
+        "count": 1
+      },
+      "generate_samples": {
+        "location": "any",
+        "time": 8,
+        "data": 22,
+        "size": 2,
+        "count": 30
+      },
+      "train_on_data": {
+        "location": "cloud",
+        "time": 12,
+        "data": 10,
+        "size": 7,
+        "count": 1
+      },
+      "end": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "latency": 0.01,
+  "nodes": {
+    "node-0": 4,
+    "node-1": 4,
+    "node-2": 6,
+    "node-3": 6,
+    "node-4": 4,
+    "node-5": 6
+  }
+}
