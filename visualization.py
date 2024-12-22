@@ -142,7 +142,11 @@ class VisualUML:
             nodes_to_connect.pop(i)
             nodes_to_connect = nodes_to_connect[i:]
             for node_r in nodes_to_connect:
-                uml_code.append(f"{node_s} <-> {node_r}")
+                arrow = "<-->"
+                # make arrows shorter between tinyFaaS nodes
+                if "Node" in node_r and "Node" in node_s:
+                    arrow = "<->"
+                uml_code.append(f"{node_s} {arrow} {node_r}")
 
         uml_code.append("@enduml")  # end uml code
 
