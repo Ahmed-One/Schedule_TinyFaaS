@@ -28,6 +28,8 @@ def run():
     diagram = VisualUML(wf=workflows, net=network, cld=cloud, P=P_out)
     diagram.code_diagram()
 
+    pass
+
 
 if __name__ == '__main__':
     run()
