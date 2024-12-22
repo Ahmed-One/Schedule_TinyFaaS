@@ -44,10 +44,12 @@ class Problem:
                             self.D[workflow, function, node_sending, node_receiving] = \
                                     wf.funs_data[workflow][function] * self.prices_ram[node_sending] + \
                                     wf.funs_data[workflow][function] * self.prices_ram[node_receiving]
+
         # Cost of running a function
         self.C = np.zeros((wf.num_workflows, wf.num_funs, self.num_nodes))  # C_n,m,j
         for workflow in range(wf.num_workflows):
             for function in range(wf.num_funs):
                 for node in range(self.num_nodes):
-                    self.C[workflow, function, node] = self.prices_start[node] + wf.funs_sizes[workflow][function]\
-                                                       * self.prices_ram[node] * wf.funs_times[workflow][function]
+                    self.C[workflow, function, node] = self.prices_start[node] * wf.funs_counts[workflow][function]\
+                                                       + wf.funs_sizes[workflow][function] * self.prices_ram[node]\
+                                                       * wf.funs_times[workflow][function]
