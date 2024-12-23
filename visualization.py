@@ -98,10 +98,12 @@ class VisualUML:
                     self.nodes[node]["workflows"][workflow] = []
                     for i_f, function in enumerate(wf.names_funs[i_wf]):
                         # Assign used ram
-                        self.nodes[node]["ram_used"] += P[i_wf, i_f, i_node] * round(wf.funs_sizes[i_wf][i_f])
+                        self.nodes[node]["ram_used"] += round(P[i_wf, i_f, i_node] * wf.funs_data[i_wf][i_f])
                         # Assign deployed function(s)
                         if abs(P[i_wf, i_f, i_node]) > 0:
-                            self.nodes[node]["workflows"][workflow].append(function)
+                            self.nodes[node]["workflows"][workflow].append(f"{function}: "
+                                                                           f"{round(P[i_wf, i_f, i_node])}"
+                                                                           f"/{wf.funs_counts[i_wf][i_f]}")
 
     def code_a_node(self, node: str):
         node_data = self.nodes[node]
