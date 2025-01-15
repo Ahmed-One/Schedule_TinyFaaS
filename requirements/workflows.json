@@ -1,6 +1,5 @@
 {
-  "workflow-TinyFaaS": {
-    "count": 1,
+  "workflow-tiny0": {
     "functions": {
       "start": {
         "location": "local",
@@ -9,35 +8,28 @@
         "size": 0,
         "count": 1
       },
-      "online-mpc": {
-        "location": "local",
-        "time": 1,
-        "data": 1,
-        "size": 0.5,
-        "count": 1
-      },
       "generate_init_samples": {
         "location": "any",
-        "time": 3,
-        "data": 2,
-        "size": 2,
+        "time": 0.5,
+        "data": 0.0001,
+        "size": 0.001,
         "count": 1
       },
       "generate_samples": {
         "location": "any",
-        "time": 1,
-        "data": 1,
-        "size": 0.5,
-        "count": 100
-      },
-      "train_on_data": {
-        "location": "cloud",
-        "time": 4,
-        "data": 3,
-        "size": 3,
+        "time": 2,
+        "data": 0.04,
+        "size": 0.002,
         "count": 1
       },
-      "end-training": {
+      "train": {
+        "location": "cloud",
+        "time": 1000,
+        "data": 0.04,
+        "size": 2,
+        "count": 1
+      },
+      "end_train": {
         "location": "local",
         "time": 0,
         "data": 0,
@@ -51,7 +43,7 @@
         "size": 0,
         "count": 1
       },
-      "end-control": {
+      "end_control": {
         "location": "local",
         "time": 0,
         "data": 0,
@@ -60,8 +52,7 @@
       }
     }
   },
-  "workflow-test0": {
-    "count": 1,
+  "workflow-tiny1": {
     "functions": {
       "start": {
         "location": "local",
@@ -72,26 +63,40 @@
       },
       "generate_init_samples": {
         "location": "any",
-        "time": 3,
-        "data": 2,
-        "size": 2,
+        "time": 0.7,
+        "data": 0.0002,
+        "size": 0.002,
         "count": 1
       },
       "generate_samples": {
         "location": "any",
-        "time": 8,
-        "data": 12,
-        "size": 1,
-        "count": 20
+        "time": 5,
+        "data": 1,
+        "size": 0.01,
+        "count": 1
       },
-      "train_on_data": {
+      "train": {
         "location": "cloud",
-        "time": 4,
+        "time": 1500,
         "data": 3,
-        "size": 3,
+        "size": 4,
         "count": 1
       },
-      "end": {
+      "end_train": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "control": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "end_control": {
         "location": "local",
         "time": 0,
         "data": 0,
@@ -100,8 +105,7 @@
       }
     }
   },
-  "workflow-test1": {
-    "count": 1,
+  "workflow-tiny2": {
     "functions": {
       "start": {
         "location": "local",
@@ -112,26 +116,93 @@
       },
       "generate_init_samples": {
         "location": "any",
-        "time": 2,
-        "data": 2,
-        "size": 1,
+        "time": 0.7,
+        "data": 0.002,
+        "size": 0.0015,
         "count": 1
       },
       "generate_samples": {
         "location": "any",
-        "time": 8,
-        "data": 22,
-        "size": 2,
-        "count": 30
-      },
-      "train_on_data": {
-        "location": "cloud",
-        "time": 12,
-        "data": 10,
-        "size": 7,
+        "time": 300,
+        "data": 20,
+        "size": 0.1,
         "count": 1
       },
-      "end": {
+      "train": {
+        "location": "cloud",
+        "time": 5000,
+        "data": 20,
+        "size": 15,
+        "count": 1
+      },
+      "end_train": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "control": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "end_control": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      }
+    }
+  },
+  "workflow-tiny3": {
+    "functions": {
+      "start": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "generate_init_samples": {
+        "location": "any",
+        "time": 7,
+        "data": 0.002,
+        "size": 0.0015,
+        "count": 1
+      },
+      "generate_samples": {
+        "location": "any",
+        "time": 900,
+        "data": 200,
+        "size": 0.3,
+        "count": 1
+      },
+      "train": {
+        "location": "cloud",
+        "time": 50000,
+        "data": 200,
+        "size": 30,
+        "count": 1
+      },
+      "end_train": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "control": {
+        "location": "local",
+        "time": 0,
+        "data": 0,
+        "size": 0,
+        "count": 1
+      },
+      "end_control": {
         "location": "local",
         "time": 0,
         "data": 0,
