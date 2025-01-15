@@ -98,7 +98,7 @@ class VisualUML:
                     self.nodes[node]["workflows"][workflow] = []
                     for i_f, function in enumerate(wf.names_funs[i_wf]):
                         # Assign used ram
-                        self.nodes[node]["ram_used"] += round(P[i_wf, i_f, i_node] * wf.funs_data[i_wf][i_f])
+                        self.nodes[node]["ram_used"] += P[i_wf, i_f, i_node] * wf.funs_data[i_wf][i_f]
                         # Assign deployed function(s)
                         if abs(P[i_wf, i_f, i_node]) > 0:
                             self.nodes[node]["workflows"][workflow].append(f"{function}: "
@@ -117,10 +117,12 @@ class VisualUML:
             for function in node_data["workflows"][workflow]:
                 node_code.append(function)
             node_code.append("----")
-        node_code.append(f"RAM usage:    {node_data['ram_used']}/{node_data['ram_limit']}")
+        node_code.append(f"RAM usage: {round(node_data['ram_used'], 3)}/{node_data['ram_limit']}")
         return node_code
 
     def code_diagram(self):
+        # Creates lines of UML code using a list.
+        # Each element in the list is a separate line in the UML file
         uml_code = ["@startuml", "\n"]  # first line in a 'uml' file
 
         for i, node in enumerate(self.nodes):
@@ -140,9 +142,13 @@ class VisualUML:
 
         # connect nodes with arrows
         for i, node_s in enumerate(self.nodes):
+            # list of nodes to connect to node_s
             nodes_to_connect = list(self.nodes)
+            # remove node_s from list to not connect it to itself
             nodes_to_connect.pop(i)
+            # list should have nodes not connected beforehand to node_s
             nodes_to_connect = nodes_to_connect[i:]
+            # loop over nodes in list to connect to node_s
             for node_r in nodes_to_connect:
                 arrow = "<->"
                 # make arrows longer between tinyFaaS and cloud nodes
