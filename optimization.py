@@ -3,7 +3,8 @@ from creation import *
 
 
 class Optimizer:
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
+    def __init__(
+            self, wf: Workflows, net: LocalNetwork, pb: Problem):
         self.model = Model("TinyFaaS-Schedule")
         self.P = self.model.addVars(wf.num_workflows, wf.num_funs, pb.num_nodes,
                                     vtype=GRB.INTEGER, name="P")  # P_n,m,i
@@ -11,25 +12,59 @@ class Optimizer:
         # expressions for L, and data transfer costs
         self.obj_latency = 0
         self.obj_transfer = 0
+        self.obj_latency_workflows = []
+        self.obj_transfer_workflows = []
         for workflow in range(wf.num_workflows):
+            obj_latency_functions = []
+            obj_transfer_functions = []
             for function in range(wf.num_funs - 1):
+                obj_latency_nodes = []
+                obj_transfer_nodes = []
                 for node_sending in range(pb.num_nodes):
+                    obj_latency = 0
+                    obj_transfer = 0
                     for node_receiving in range(pb.num_nodes):
-                        self.obj_latency = self.obj_latency + self.P[workflow, function, node_sending] \
-                                           * self.P[workflow, function + 1, node_receiving] \
-                                           * pb.L[node_sending, node_receiving]
-                        self.obj_transfer = self.obj_transfer + self.P[workflow, function, node_sending] \
-                                            * self.P[workflow, function + 1, node_receiving] \
-                                            * pb.D[workflow, function, node_sending, node_receiving]
+                        obj_latency = obj_latency + self.P[workflow, function, node_sending] \
+                                      * self.P[workflow, function + 1, node_receiving] \
+                                      * pb.L[node_sending, node_receiving]
+                        self.obj_latency += obj_latency
+
+                        obj_transfer = obj_transfer + self.P[workflow, function, node_sending] \
+                                       * self.P[workflow, function + 1, node_receiving] \
+                                       * pb.D[workflow, function, node_sending, node_receiving]
+                        self.obj_transfer += obj_transfer
+
+                    obj_latency_nodes.append(obj_latency)
+                    obj_transfer_nodes.append(obj_transfer)
+                obj_latency_functions.append(obj_latency_nodes)
+                obj_transfer_functions.append(obj_transfer_nodes)
+            self.obj_latency_workflows.append(obj_latency_functions)
+            self.obj_transfer_workflows.append(obj_transfer_functions)
 
         # expressions for time, and data running costs
         self.obj_time = 0
         self.obj_ram = 0
+        self.obj_time_workflows = []
+        self.obj_ram_workflows = []
         for workflow in range(wf.num_workflows):
+            obj_time_functions = []
+            obj_ram_functions = []
             for function in range(wf.num_funs):
+                obj_time_nodes = []
+                obj_ram_nodes = []
                 for node in range(pb.num_nodes):
-                    self.obj_time = self.obj_time + self.P[workflow, function, node] * pb.T[workflow, function, node]
-                    self.obj_ram = self.obj_ram + self.P[workflow, function, node] * pb.C[workflow, function, node]
+                    obj_time = self.P[workflow, function, node] * pb.T[workflow, function, node]
+                    self.obj_time += obj_time
+
+                    obj_ram = self.P[workflow, function, node] * pb.C[workflow, function, node]
+                    self.obj_ram += obj_ram
+
+                    obj_time_nodes.append(obj_time)
+                    obj_ram_nodes.append(obj_ram)
+                obj_time_functions.append(obj_time_nodes)
+                obj_ram_functions.append(obj_ram_nodes)
+            self.obj_time_workflows.append(obj_time_functions)
+            self.obj_ram_workflows.append(obj_ram_functions)
 
         # expression for the total objective function
         self.w_1, self.w_2 = 1, 470000  # w1 for L and time, w2 for costs
