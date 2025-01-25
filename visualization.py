@@ -19,11 +19,20 @@ def abbreviate_fun_names(functions: list):
 
 def abbreviate_wf_name(workflow_name: str):
     if "workflow" in workflow_name:
-        workflow_name.replace("workflow", "wf")
+        workflow_name = workflow_name.replace("workflow", "wf")
     if "test" in workflow_name:
-        workflow_name.replace("test", "tst")
+        workflow_name = workflow_name.replace("test", "tst")
     if "tiny" in workflow_name:
-        workflow_name.replace("tiny", "tny")
+        workflow_name = workflow_name.replace("tiny", "tny")
+    if "-" in workflow_name:
+        workflow_name = workflow_name.replace("-", "_")
+    return workflow_name
+
+
+def write_uml_file(name: str, code: list):
+    with open(os.path.abspath(name), "w+") as f:
+        for line in code:
+            f.write(line + "\n")
 
 
 @dataclass
@@ -76,6 +85,48 @@ class WorkflowsTable:
             table.print()
 
 
+class WorkflowsUML:
+    def __init__(self, wf: Workflows):
+        self.uml_code = []
+        self.uml_code.append("")
+        for i, workflow in enumerate(wf.names_workflows):
+            # abbreviate workflow name for usability
+            wf_name_abbrev = abbreviate_wf_name(workflow)
+
+            # label series of functions with workflow name
+            self.uml_code.append(f"package \"{workflow}\"{{")
+            # Json objects to encapsulate functions' name and properties
+            for j, function in enumerate(wf.names_funs[i]):
+                # Check if function is local (properties are zero)
+                if j in wf.funs_local[i]:  # sketchy! assumes every workflow has at least one local function
+                    self.uml_code.append(f"() \"{function}\" as {wf_name_abbrev}_{function}")
+                else:
+                    self.uml_code.append(f"json \"{function}\" as {wf_name_abbrev}_{function} {{")
+                    self.uml_code.append(f"\"time\": {wf.funs_times[i][j]},")
+                    self.uml_code.append(f"\"data\": {wf.funs_data[i][j]},")
+                    self.uml_code.append(f"\"size\": {wf.funs_sizes[i][j]}")
+                    self.uml_code.append("}")
+
+            # Connect consecutive functions with arrows
+            for j in range(len(wf.names_funs[i]) - 1):
+                self.uml_code.append(f"{wf_name_abbrev}_{wf.names_funs[i][j]} -->"
+                                     f" {wf_name_abbrev}_{wf.names_funs[i][j + 1]}")
+
+            # close workflow package
+            self.uml_code.append("}")
+
+            self.uml_code.append("\n")
+
+    def code_diagram(self):
+        code_start = ["@startuml", "\n"]  # first line in a 'uml' file
+        code_start.append("left to right direction")
+        code_start.append("\n")
+        self.uml_code = code_start + self.uml_code
+        self.uml_code.append("@enduml")
+
+        write_uml_file("workflows_uml.puml", self.uml_code)
+
+
 class VisualUML:
     def __init__(self, wf: Workflows, net: LocalNetwork, cld: CloudsInfo, P: np.ndarray):
         # Create dictionary to hold information about occupiers of each node
@@ -123,22 +174,22 @@ class VisualUML:
     def code_diagram(self):
         # Creates lines of UML code using a list.
         # Each element in the list is a separate line in the UML file
-        uml_code = ["@startuml", "\n"]  # first line in a 'uml' file
+        self.uml_code = ["@startuml", "\n"]  # first line in a 'uml' file
 
         for i, node in enumerate(self.nodes):
             # declare a deployment diagram entity based on node type
             if i < self.num_tiny:
-                uml_code.append(f"node {node}[")
+                self.uml_code.append(f"node {node}[")
             else:
-                uml_code.append(f"cloud {node}[")
+                self.uml_code.append(f"cloud {node}[")
 
             # fill in node information coded with indentation
             for line in self.code_a_node(node):
-                uml_code.append("  " + line)
+                self.uml_code.append("  " + line)
 
-            uml_code.append("]")  # close node description
+            self.uml_code.append("]")  # close node description
 
-        uml_code.append("\n")  # empty line after node description
+        self.uml_code.append("\n")  # empty line after node description
 
         # connect nodes with arrows
         for i, node_s in enumerate(self.nodes):
@@ -154,10 +205,8 @@ class VisualUML:
                 # make arrows longer between tinyFaaS and cloud nodes
                 if ("Node" in node_r) ^ ("Node" in node_s):
                     arrow = "<-->"
-                uml_code.append(f"{node_s} {arrow} {node_r}")
+                self.uml_code.append(f"{node_s} {arrow} {node_r}")
 
-        uml_code.append("@enduml")  # end uml code
+        self.uml_code.append("@enduml")  # end uml code
 
-        with open(os.path.abspath("diagram_uml.puml"), "w+") as f:
-            for line in uml_code:
-                f.write(line + "\n")
+        write_uml_file("nodes_assigned_uml.puml", self.uml_code)
