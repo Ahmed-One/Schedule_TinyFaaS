@@ -1,11 +1,11 @@
 # Parse the data,create the problem, run the optimization and visualize the results
 from optimization import *
-from visualization import WorkflowsTable, VisualUML
+from visualization import WorkflowsTable, DeploymentUML, WorkflowsUML
 
 
 def run():
     # Parse the JSON data
-    workflows = Workflows(datapath="requirements//workflows2.json")
+    workflows = Workflows(datapath="requirements//workflows.json")
     network = LocalNetwork(datapath="requirements//network.json")
     cloud = CloudsInfo(datapath="requirements//cloud.json")
 
@@ -25,8 +25,11 @@ def run():
     tables = WorkflowsTable(wf=workflows, cld=cloud, P=P_out)
     tables.print()
 
-    diagram = VisualUML(wf=workflows, net=network, cld=cloud, P=P_out)
-    diagram.code_diagram()
+    workflows_diagram = WorkflowsUML(wf=workflows)
+    workflows_diagram.code_diagram()
+
+    assigned_nodes_diagram = DeploymentUML(wf=workflows, net=network, cld=cloud, P=P_out)
+    assigned_nodes_diagram.code_diagram()
 
     pass
 
