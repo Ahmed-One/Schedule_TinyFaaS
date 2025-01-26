@@ -95,7 +95,6 @@ class WorkflowsTable:
                 f.write(line + "\n")
 
 
-
 class DiagramUML:
     def __init__(self, title: str, file_name: str):
         # Creates lines of UML code using a list.
