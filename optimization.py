@@ -1,4 +1,6 @@
+from abc import abstractmethod
 from gurobipy import *
+
 from creation import *
 
 
@@ -32,12 +34,16 @@ class Optimization:
         self.model.update()
         self.model.optimize()
 
+    @abstractmethod
+    def get_result(self):
+        raise NotImplementedError
+
 
 class Optimizer(Optimization):
     def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
         super().__init__()
-        self.P = self.model.addVars(wf.num_workflows, wf.num_funs, pb.num_nodes,
-                                    vtype=GRB.INTEGER, name="P")  # P_n,m,i
+        self.var_dim = (wf.num_workflows, wf.num_funs, pb.num_nodes)
+        self.P = self.model.addVars(*self.var_dim, vtype=GRB.INTEGER, name="P")  # P_n,m,i
 
         # expressions for L, and data transfer costs
         for workflow in range(wf.num_workflows):
@@ -123,13 +129,16 @@ class Optimizer(Optimization):
                                      == wf.funs_counts[workflow][function],
                                      name='function-locality-constraint')
 
+    def get_result(self):
+        return np.reshape(np.array([item.x for item in self.model.getVars()]), self.var_dim)
+
 
 # Optimizer2 optimizes deployment for edges not nodes to eliminate non-linear terms
 class Optimizer2(Optimization):
     def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
         super().__init__()
-        self.P = self.model.addVars(wf.num_workflows, wf.num_funs, pb.num_nodes, pb.num_nodes,
-                                    vtype=GRB.INTEGER, name="P")  # P_n,m,i,j
+        self.var_dim = (wf.num_workflows, wf.num_funs, pb.num_nodes, pb.num_nodes)
+        self.P = self.model.addVars(*self.var_dim, vtype=GRB.INTEGER, name="P")  # P_n,m,i,j
 
         # expressions for L, and data transfer costs
         for workflow in range(wf.num_workflows):
@@ -233,3 +242,7 @@ class Optimizer2(Optimization):
                                          quicksum(self.P[workflow, function + 1, node_receiving, node_receiving_next]
                                                   for node_receiving_next in range(pb.num_nodes)),
                                          name='edge-consistency-constraint?')
+
+    def get_result(self):
+        # sum along last axis
+        return np.reshape(np.array([item.x for item in self.model.getVars()]), self.var_dim).sum(len(self.var_dim) - 1)

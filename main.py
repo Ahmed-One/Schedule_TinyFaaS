@@ -14,14 +14,14 @@ def run():
 
     # Create problem parameters and optimize the for the solution
     problem = Problem(wf=workflows, net=network, cld=cloud)
-    op = Optimizer(wf=workflows, net=network, pb=problem)
+    op = Optimizer2(wf=workflows, net=network, pb=problem)
     op.w_1 = 1
     op.w_2 = 470000
     op.solve()
 
     # Print result
-    P_out = np.reshape(np.array([item.x for item in op.model.getVars()]),
-                       (workflows.num_workflows, workflows.num_funs, problem.num_nodes))
+    P_out = op.get_result()
+
     tables = WorkflowsTable(wf=workflows, cld=cloud, P=P_out)
     tables.print()
 
