@@ -5,6 +5,8 @@ import numpy as np
 
 from parsing import *
 
+SAVE_PATH = "report//"  # relative save path
+
 
 # Helper function for abbreviating names
 def abbreviate_fun_names(functions: list):
@@ -29,12 +31,7 @@ def abbreviate_wf_name(workflow_name: str):
     return workflow_name
 
 
-def write_uml_file(name: str, code: list):
-    with open(os.path.abspath(name), "w+") as f:
-        for line in code:
-            f.write(line + "\n")
-
-
+# Annotate workflow deployment table using pandas
 @dataclass
 class WorkflowTable:
     name: str
@@ -57,38 +54,74 @@ class WorkflowTable:
 
         # Create pandas dataframe
         self.table = pd.DataFrame(entries, columns=headers)
-        self.table.set_index("functions")
+        self.table.index.name = self.name
 
     def print(self):
         print("_" * len(self.name))
-        print(self.name)
+        # print(self.name)
         pd.set_option('display.max_colwidth', None)
         print(self.table)
 
 
-# Use Pandas library
+# Visualize and annotate optimization result using Pandas
 class WorkflowsTable:
     def __init__(self, wf: Workflows, cld: CloudsInfo, P: np.ndarray):
+        # list of workflows to print as tables
         self.workflow_tables = []
+
+        # annotate node names
+        num_nodes = P.shape[2]  # number of nodes (0: wf x 1: fun x 3: nodes)
+        names_cloud = list(cld.names_cloud)
+        num_tiny = num_nodes - len(names_cloud)
+        nodes = [f"Nd-{i}" for i in range(num_tiny)]
+        [nodes.append(cloud_name) for cloud_name in names_cloud]
+
+        # annotate function names and create tables
         for index, workflow in enumerate(wf.names_workflows):
             name = workflow
-            names_cloud = list(cld.names_cloud)
             names_funs = wf.names_funs[index]
-            num_nodes = P.shape[2]  # number of nodes (0: wf x 1: fun x 3: nodes)
-            num_tiny = num_nodes - len(names_cloud)
-            nodes = [f"Nd-{i}" for i in range(num_tiny)]
-            [nodes.append(cloud_name) for cloud_name in names_cloud]
             self.workflow_tables.append(WorkflowTable(name=name, functions=names_funs, nodes=nodes, p_matrix=P[index]))
 
     def print(self):
+        # list to save tables as CSV
+        csv = []
         for table in self.workflow_tables:
             table.print()
+            csv = csv + table.table.to_csv().split('\r\n')  # breakup single string into list elements
+
+        # write CSV tables to file
+        with open(os.path.abspath(f"{SAVE_PATH}optimization_result.csv"), "w+") as f:
+            for line in csv:
+                f.write(line + "\n")
 
 
-class WorkflowsUML:
+
+class DiagramUML:
+    def __init__(self, title: str, file_name: str):
+        # Creates lines of UML code using a list.
+        # Each element in the list is a separate line in the UML file
+        self.uml_code = ["@startuml", "\n"]  # first line in a 'uml' file
+        # diagram title
+        self.uml_code.append(f"title {title}")
+        # diagram save path
+        self.save_path = f"{SAVE_PATH}{file_name}.puml"
+
+    def write_uml_file(self):
+        self.uml_code.append("@enduml")  # end uml code
+
+        with open(os.path.abspath(self.save_path), "w+") as f:
+            for line in self.uml_code:
+                f.write(line + "\n")
+
+
+class WorkflowsUML(DiagramUML):
     def __init__(self, wf: Workflows):
-        self.uml_code = []
-        self.uml_code.append("")
+        # initialize uml-diagram superclass
+        super().__init__(title="Workflows Properties", file_name="workflows_uml")
+
+        # Diagram flow from left to right
+        self.uml_code = self.uml_code + ["left to right direction", "\n"]
+
         for i, workflow in enumerate(wf.names_workflows):
             # abbreviate workflow name for usability
             wf_name_abbrev = abbreviate_wf_name(workflow)
@@ -118,17 +151,14 @@ class WorkflowsUML:
             self.uml_code.append("\n")
 
     def code_diagram(self):
-        code_start = ["@startuml", "\n"]  # first line in a 'uml' file
-        code_start.append("left to right direction")
-        code_start.append("\n")
-        self.uml_code = code_start + self.uml_code
-        self.uml_code.append("@enduml")
-
-        write_uml_file("workflows_uml.puml", self.uml_code)
+        self.write_uml_file()
 
 
-class VisualUML:
+class DeploymentUML(DiagramUML):
     def __init__(self, wf: Workflows, net: LocalNetwork, cld: CloudsInfo, P: np.ndarray):
+        # initialize uml-diagram superclass
+        super().__init__(title="Optimal Deployment Solution", file_name="nodes_assigned_uml")
+
         # Create dictionary to hold information about occupiers of each node
         self.nodes = {f"Node_{i}": {} for i in range(net.num_tiny)}
         self.nodes.update({cloud_name: {} for cloud_name in cld.names_cloud})
@@ -172,10 +202,6 @@ class VisualUML:
         return node_code
 
     def code_diagram(self):
-        # Creates lines of UML code using a list.
-        # Each element in the list is a separate line in the UML file
-        self.uml_code = ["@startuml", "\n"]  # first line in a 'uml' file
-
         for i, node in enumerate(self.nodes):
             # declare a deployment diagram entity based on node type
             if i < self.num_tiny:
@@ -207,6 +233,4 @@ class VisualUML:
                     arrow = "<-->"
                 self.uml_code.append(f"{node_s} {arrow} {node_r}")
 
-        self.uml_code.append("@enduml")  # end uml code
-
-        write_uml_file("nodes_assigned_uml.puml", self.uml_code)
+        self.write_uml_file()
