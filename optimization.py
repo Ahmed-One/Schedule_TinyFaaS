@@ -2,17 +2,44 @@ from gurobipy import *
 from creation import *
 
 
-class Optimizer:
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
+class Optimization:
+    def __init__(self):
         self.model = Model("TinyFaaS-Schedule")
-        self.P = self.model.addVars(wf.num_workflows, wf.num_funs, pb.num_nodes,
-                                    vtype=GRB.INTEGER, name="P")  # P_n,m,i
 
-        # expressions for L, and data transfer costs
+        # Objective costs
+        self.obj = 0
         self.obj_latency = 0
         self.obj_transfer = 0
         self.obj_latency_workflows = []
         self.obj_transfer_workflows = []
+        self.obj_time = 0
+        self.obj_ram = 0
+        self.obj_time_workflows = []
+        self.obj_ram_workflows = []
+
+        # Objective function weights
+        # w1 for L and time, w2 for costs
+        self.w_1, self.w_2 = 1, 470000
+
+    def formulate_objectives(self):
+        # expression for the total objective function
+        self.obj = self.w_1 * (self.obj_latency + self.obj_time) + self.w_2 * (self.obj_transfer + self.obj_ram)
+        self.model.setObjective(self.obj, GRB.MINIMIZE)
+
+    # Solve model
+    def solve(self):
+        self.model.setParam("OutputFlag", 1)
+        self.model.update()
+        self.model.optimize()
+
+
+class Optimizer(Optimization):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
+        super().__init__()
+        self.P = self.model.addVars(wf.num_workflows, wf.num_funs, pb.num_nodes,
+                                    vtype=GRB.INTEGER, name="P")  # P_n,m,i
+
+        # expressions for L, and data transfer costs
         for workflow in range(wf.num_workflows):
             obj_latency_functions = []
             obj_transfer_functions = []
@@ -41,10 +68,6 @@ class Optimizer:
             self.obj_transfer_workflows.append(obj_transfer_functions)
 
         # expressions for time, and data running costs
-        self.obj_time = 0
-        self.obj_ram = 0
-        self.obj_time_workflows = []
-        self.obj_ram_workflows = []
         for workflow in range(wf.num_workflows):
             obj_time_functions = []
             obj_ram_functions = []
@@ -65,10 +88,7 @@ class Optimizer:
             self.obj_time_workflows.append(obj_time_functions)
             self.obj_ram_workflows.append(obj_ram_functions)
 
-        # expression for the total objective function
-        self.w_1, self.w_2 = 1, 470000  # w1 for L and time, w2 for costs
-        self.obj = self.w_1 * (self.obj_latency + self.obj_time) + self.w_2 * (self.obj_transfer + self.obj_ram)
-        self.model.setObjective(self.obj, GRB.MINIMIZE)
+        self.formulate_objectives()
 
         # Constraints
 
@@ -101,26 +121,17 @@ class Optimizer:
             for function in range(wf.num_funs):
                 self.model.addConstr(quicksum(self.P[workflow, function, node] for node in range(pb.num_nodes))
                                      == wf.funs_counts[workflow][function],
-                                     name='function-count-constraint')
-
-    # Solve model
-    def solve(self):
-        self.model.setParam("OutputFlag", 1)
-        self.model.update()
-        self.model.optimize()
+                                     name='function-locality-constraint')
 
 
-class Optimizer2:
+# Optimizer2 optimizes deployment for edges not nodes to eliminate non-linear terms
+class Optimizer2(Optimization):
     def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
-        self.model = Model("TinyFaaS-Schedule")
+        super().__init__()
         self.P = self.model.addVars(wf.num_workflows, wf.num_funs, pb.num_nodes, pb.num_nodes,
                                     vtype=GRB.INTEGER, name="P")  # P_n,m,i,j
 
         # expressions for L, and data transfer costs
-        self.obj_latency = 0
-        self.obj_transfer = 0
-        self.obj_latency_workflows = []
-        self.obj_transfer_workflows = []
         for workflow in range(wf.num_workflows):
             obj_latency_functions = []
             obj_transfer_functions = []
@@ -147,10 +158,6 @@ class Optimizer2:
             self.obj_transfer_workflows.append(obj_transfer_functions)
 
         # expressions for time, and data running costs
-        self.obj_time = 0
-        self.obj_ram = 0
-        self.obj_time_workflows = []
-        self.obj_ram_workflows = []
         for workflow in range(wf.num_workflows):
             obj_time_functions = []
             obj_ram_functions = []
@@ -175,9 +182,7 @@ class Optimizer2:
             self.obj_ram_workflows.append(obj_ram_functions)
 
         # expression for the total objective function
-        self.w_1, self.w_2 = 1, 470000  # w1 for L and time, w2 for costs
-        self.obj = self.w_1 * (self.obj_latency + self.obj_time) + self.w_2 * (self.obj_transfer + self.obj_ram)
-        self.model.setObjective(self.obj, GRB.MINIMIZE)
+        self.formulate_objectives()
 
         # Constraints
 
@@ -216,7 +221,7 @@ class Optimizer2:
                                                        for node_receiving in range(pb.num_nodes))
                                               for node_sending in range(pb.num_nodes))
                                      == wf.funs_counts[workflow][function],
-                                     name='function-count-constraint')
+                                     name='function-locality-constraint')
 
         # Continuation Constraint?
         # sum_i P_n,m,i,j = sum_k P_n,m+1,j,k
@@ -228,9 +233,3 @@ class Optimizer2:
                                          quicksum(self.P[workflow, function + 1, node_receiving, node_receiving_next]
                                                   for node_receiving_next in range(pb.num_nodes)),
                                          name='edge-consistency-constraint?')
-
-    # Solve model
-    def solve(self):
-        self.model.setParam("OutputFlag", 1)
-        self.model.update()
-        self.model.optimize()
