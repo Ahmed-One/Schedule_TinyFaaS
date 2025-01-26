@@ -101,14 +101,14 @@ class CloudsInfo:
             cloud_config = json.load(f)
 
         # Extract cloud providers' information
-        self.names_cloud = cloud_config.keys()
+        self.names_cloud = list(cloud_config.keys())
         self.num_clouds = len(self.names_cloud)
         self.prices_cloud_transfer = []
         self.prices_cloud_ram = []
         self.prices_cloud_start = []
         self.latency_cloud = []
         for provider in cloud_config.values():
-            self.prices_cloud_transfer.append(["pricing_Storage_Transfer"])  # $/GB
+            self.prices_cloud_transfer.append(provider["pricing_Storage_Transfer"])  # $/GB
             self.prices_cloud_ram.append(provider["pricing_RAM"])  # GB*s
             self.prices_cloud_start.append(provider["pricing_StartRequest"])  # $/request
             self.latency_cloud.append(provider["estimated_latency"])  # second

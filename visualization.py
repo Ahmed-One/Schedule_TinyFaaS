@@ -87,7 +87,9 @@ class WorkflowsTable:
         csv = []
         for table in self.workflow_tables:
             table.print()
-            csv = csv + table.table.to_csv().split('\r\n')  # breakup single string into list elements
+            # breakup csv string into list elements, reject last empty line
+            csv = csv + table.table.to_csv().split('\r\n')[:-1]
+            # save as image using df2img (lookup in 'Python Packages' tab)
 
         # write CSV tables to file
         with open(os.path.abspath(f"{SAVE_PATH}optimization_result.csv"), "w+") as f:
@@ -95,6 +97,7 @@ class WorkflowsTable:
                 f.write(line + "\n")
 
 
+# Superclass for creating UML-diagrams
 class DiagramUML:
     def __init__(self, title: str, file_name: str):
         # Creates lines of UML code using a list.
@@ -146,8 +149,48 @@ class WorkflowsUML(DiagramUML):
 
             # close workflow package
             self.uml_code.append("}")
-
             self.uml_code.append("\n")
+
+    def code_diagram(self):
+        self.write_uml_file()
+
+
+class NetworkUML(DiagramUML):
+    def __init__(self, net: LocalNetwork, cld: CloudsInfo):
+        # initialize uml-diagram superclass
+        super().__init__(title="Network Properties", file_name="network_uml")
+        self.uml_code.append("left to right direction")
+
+        # cloud nodes with pricing displayed
+        for node in range(cld.num_clouds):
+            self.uml_code.append(f'cloud {cld.names_cloud[node]} [')  # start cloud
+            self.uml_code.append(f'\t<b>{cld.names_cloud[node]}')
+            self.uml_code.append('\tCosts')
+            self.uml_code.append(f'\tRun (GBs): {cld.prices_cloud_ram[node]}')
+            self.uml_code.append(f'\tTransfer (GB): {cld.prices_cloud_transfer[node]}')
+            self.uml_code.append(f'\tRequest: {cld.prices_cloud_start[node]}')
+            self.uml_code.append(']')  # close cloud
+        self.uml_code.append('\n')
+
+        # Frame local for enclosing tinyFaaS nodes and router
+        self.uml_code.append('frame Local{')  # start package
+        self.uml_code.append('\tport router')
+        nodes_codes = []
+        for node in range(net.num_tiny):
+            node_code = f'[Node-{node}\\nRAM: {net.rams_tiny[node]}GB]'
+            nodes_codes.append(node_code)
+            self.uml_code.append(f'\t{node_code}')
+        # self.uml_code.append(f'\tlabel "Total RAM: {sum(net.rams_tiny)}"')
+        self.uml_code.append(f'\tnote as N\n\t\tTotal RAM: {sum(net.rams_tiny)}GB\n\tend note')
+        self.uml_code.append('}\n')  # close package
+
+        # connect nodes and router with latency annotated
+        for code in nodes_codes:
+            self.uml_code.append(f'{code} <-> router : {net.latency_local}')
+
+        # connect cloud to router
+        for node in range(cld.num_clouds):
+            self.uml_code.append(f'{cld.names_cloud[node]} <--> router : {cld.latency_cloud[node]}')
 
     def code_diagram(self):
         self.write_uml_file()
