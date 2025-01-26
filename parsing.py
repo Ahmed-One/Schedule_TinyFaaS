@@ -37,9 +37,9 @@ class Workflows:
             for index, function in enumerate(workflow["functions"]):
                 names.append(function)
                 fun_info = workflow["functions"][function]
-                times.append(fun_info["time"])
-                datas.append(fun_info["data"])
-                sizes.append(fun_info["size"])
+                times.append(fun_info["time"])  # second
+                datas.append(fun_info["data"])  # GB
+                sizes.append(fun_info["size"])  # GB
                 if fun_info["location"] == "local":
                     start_ends.append(index)
                 elif fun_info["location"] == "cloud":
@@ -81,11 +81,11 @@ class LocalNetwork:
             network_config = json.load(f)
 
         # Extract network properties
-        self.latency_local = network_config["latency"]
+        self.latency_local = network_config["latency"]  # second
         self.num_tiny = len(network_config["nodes"])
         self.rams_tiny = []
         for node in network_config["nodes"]:
-            self.rams_tiny.append(network_config["nodes"][node])
+            self.rams_tiny.append(network_config["nodes"][node])  # GB
 
 
 def check_network_validity(num_workflows: int, num_tiny: int):
@@ -108,7 +108,7 @@ class CloudsInfo:
         self.prices_cloud_start = []
         self.latency_cloud = []
         for provider in cloud_config.values():
-            self.prices_cloud_transfer.append(["pricing_Storage_Transfer"])
-            self.prices_cloud_ram.append(provider["pricing_RAM"])
-            self.prices_cloud_start.append(provider["pricing_StartRequest"])
-            self.latency_cloud.append(provider["estimated_latency"])
+            self.prices_cloud_transfer.append(["pricing_Storage_Transfer"])  # $/GB
+            self.prices_cloud_ram.append(provider["pricing_RAM"])  # GB*s
+            self.prices_cloud_start.append(provider["pricing_StartRequest"])  # $/request
+            self.latency_cloud.append(provider["estimated_latency"])  # second

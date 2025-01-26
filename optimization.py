@@ -76,13 +76,15 @@ class Optimizer:
         # P_n,(0,5,7),n = 1 for all n else 0
         for workflow in range(wf.num_workflows):
             for function in wf.funs_local[workflow]:
-                self.model.addConstr(self.P[workflow, function, workflow] - 1 == 0)
+                self.model.addConstr(self.P[workflow, function, workflow] - 1 == 0,
+                                     name='local-function-constraint')
 
         # training functions can not be executed in local nodes
         # sum_k P_n,4,k = 0 , k in {0 .. 3}
         for workflow in range(wf.num_workflows):
             for function in wf.funs_cloud[workflow]:
-                self.model.addConstr(quicksum(self.P[workflow, function, node] for node in range(net.num_tiny)) == 0)
+                self.model.addConstr(quicksum(self.P[workflow, function, node] for node in range(net.num_tiny)) == 0,
+                                     name='cloud-function-constraint')
 
         # maximum ram limit per sum of functions m on node k
         # sum_n sum_m P_n,m,k * RAM_n,m <= MAX_k , for all k in {0 ..3} for all n, m
@@ -90,14 +92,16 @@ class Optimizer:
             self.model.addConstr(
                 quicksum(quicksum(self.P[workflow, function, node] * wf.funs_data[workflow][function]
                                   for function in range(wf.num_funs))
-                         for workflow in range(wf.num_workflows)) <= pb.ram_limits[node])
+                         for workflow in range(wf.num_workflows)) <= pb.ram_limits[node],
+                name='ram-limit-constraint')
 
         # each function can only be assigned to a single node
         # sum_j P_n,m,j = 1 for all n,m
         for workflow in range(wf.num_workflows):
             for function in range(wf.num_funs):
                 self.model.addConstr(quicksum(self.P[workflow, function, node] for node in range(pb.num_nodes))
-                                     == wf.funs_counts[workflow][function])
+                                     == wf.funs_counts[workflow][function],
+                                     name='function-count-constraint')
 
     # Solve model
     def solve(self):
@@ -182,7 +186,8 @@ class Optimizer2:
         for workflow in range(wf.num_workflows):
             for function in wf.funs_local[workflow]:
                 self.model.addConstr(quicksum(self.P[workflow, function, workflow, node_receiving]
-                                              for node_receiving in range(pb.num_nodes)) - 1 == 0)
+                                              for node_receiving in range(pb.num_nodes)) - 1 == 0,
+                                     name='local-function-constraint')
 
         # training functions can not be executed in local nodes
         # sum_k P_n,4,k,j = 0 , k in {0 .. 3} and all j
@@ -190,17 +195,18 @@ class Optimizer2:
             for function in wf.funs_cloud[workflow]:
                 self.model.addConstr(quicksum(quicksum(self.P[workflow, function, node_sending, node_receiving]
                                                        for node_sending in range(net.num_tiny))
-                                              for node_receiving in range(pb.num_nodes)) == 0)
+                                              for node_receiving in range(pb.num_nodes)) == 0,
+                                     name='cloud-function-constraint')
 
         # maximum ram limit per sum of functions m on node k
         # sum_n sum_m sum_j P_n,m,i,j * RAM_n,m <= RAM_MAX_i , for all i
-        # TODO check constraint in original optimizer
         for node_sending in range(pb.num_nodes):
             self.model.addConstr(quicksum(quicksum(quicksum(
                 self.P[workflow, function, node_sending, node_receiving] * wf.funs_data[workflow][function]
-                                for node_receiving in range(pb.num_nodes))
-                                for function in range(wf.num_funs))
-                                for workflow in range(wf.num_workflows)) <= pb.ram_limits[node_sending])
+                for node_receiving in range(pb.num_nodes))
+                                                   for function in range(wf.num_funs))
+                                          for workflow in range(wf.num_workflows)) <= pb.ram_limits[node_sending],
+                                 name='ram-limit-constraint')
 
         # each function can only be assigned to a single node
         # sum_j P_n,m,i,j = 1 for all n,m
@@ -209,17 +215,19 @@ class Optimizer2:
                 self.model.addConstr(quicksum(quicksum(self.P[workflow, function, node_sending, node_receiving]
                                                        for node_receiving in range(pb.num_nodes))
                                               for node_sending in range(pb.num_nodes))
-                                     == wf.funs_counts[workflow][function])
+                                     == wf.funs_counts[workflow][function],
+                                     name='function-count-constraint')
 
         # Continuation Constraint?
-        # TODO: Check!!
+        # sum_i P_n,m,i,j = sum_k P_n,m+1,j,k
         for workflow in range(wf.num_workflows):
             for function in range(wf.num_funs - 1):
                 for node_receiving in range(pb.num_nodes):
                     self.model.addConstr(quicksum(self.P[workflow, function, node_sending, node_receiving]
                                                   for node_sending in range(pb.num_nodes)) ==
                                          quicksum(self.P[workflow, function + 1, node_receiving, node_receiving_next]
-                                                  for node_receiving_next in range(pb.num_nodes)))
+                                                  for node_receiving_next in range(pb.num_nodes)),
+                                         name='edge-consistency-constraint?')
 
     # Solve model
     def solve(self):
