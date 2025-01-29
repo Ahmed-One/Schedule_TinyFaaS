@@ -1,8 +1,11 @@
 # Visualize optimization results
-import pandas as pd
 from dataclasses import dataclass, field
+import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
 
+from creation import Problem
+from optimization import Optimization
 from parsing import *
 
 SAVE_PATH = "report//"  # relative save path
@@ -276,3 +279,58 @@ class DeploymentUML(DiagramUML):
                 self.uml_code.append(f"{node_s} {arrow} {node_r}")
 
         self.write_uml_file()
+
+
+class PlotObjectives:
+    def __init__(self, op: Optimization, wf: Workflows, pb: Problem):
+        self.total_objective = op.obj.getValue()
+        self.main_objectives = {"latency": op.obj_latency.getValue(),
+                                "time/1000": op.obj_time.getValue() / 1000,
+                                "transfer": op.obj_transfer.getValue(),
+                                "ram": op.obj_ram.getValue()}
+
+        # Get workflow objective costs
+        self.workflows_names = [abbreviate_wf_name(workflow) for workflow in wf.names_workflows]
+        self.workflows_latency = []
+        self.workflows_time = []
+        self.workflows_transfer = []
+        self.workflows_ram = []
+        for workflow in range(wf.num_workflows):
+            workflow_latency = 0
+            workflow_time = 0
+            workflow_transfer = 0
+            workflow_ram = 0
+            for function in range(len(wf.names_funs[workflow])-1):
+                for node in range(pb.num_nodes):
+                    workflow_latency += op.obj_latency_workflows[workflow][function][node].getValue()
+                    workflow_time += op.obj_time_workflows[workflow][function][node].getValue() / 1000
+                    workflow_transfer += op.obj_transfer_workflows[workflow][function][node].getValue()
+                    workflow_ram += op.obj_ram_workflows[workflow][function][node].getValue()
+            self.workflows_latency.append(workflow_latency)
+            self.workflows_time.append(workflow_time)
+            self.workflows_transfer.append(workflow_transfer)
+            self.workflows_ram.append(workflow_ram)
+
+        # Pie Chart of totals
+        plt.pie(x=list(self.main_objectives.values()), labels=list(self.main_objectives.keys()),
+                wedgeprops=dict(width=0.5))
+        plt.title("Objective Costs")
+        plt.text(x=-1, y=-1.2, s=f"Total: {self.total_objective}, Weights: {op.w_1}, {op.w_2}")
+        plt.savefig(f"{SAVE_PATH}Objectives_pie.png")
+
+        # subplot of the 4 quad objectives
+        self.fig, self.ax = plt.subplots(2, 2)
+        self.ax[0, 0].bar(x=self.workflows_names, height=self.workflows_latency)
+        self.ax[0, 0].set_title("Workflows' Total Latency [s]")
+        self.ax[0, 1].bar(x=self.workflows_names, height=self.workflows_time)
+        self.ax[0, 1].set_title("Workflows' Total Time [s]")
+        self.ax[1, 0].bar(x=self.workflows_names, height=self.workflows_transfer)
+        self.ax[1, 0].set_title("Workflows' Data Transfer Cost [$]")
+        self.ax[1, 1].bar(x=self.workflows_names, height=self.workflows_ram)
+        self.ax[1, 1].set_title("Workflows' Running Cost [$]")
+        self.fig.tight_layout()
+        self.fig.savefig(f"{SAVE_PATH}Workflows_objectives.png")
+
+    def show_plots(self):
+        self.fig.show()
+        plt.show()

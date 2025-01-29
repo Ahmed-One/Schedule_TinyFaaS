@@ -1,6 +1,6 @@
 # Parse the data,create the problem, run the optimization and visualize the results
 from optimization import *
-from visualization import WorkflowsTable, DeploymentUML, WorkflowsUML, NetworkUML
+from visualization import WorkflowsTable, DeploymentUML, WorkflowsUML, NetworkUML, PlotObjectives
 
 
 def run():
@@ -33,6 +33,9 @@ def run():
 
     assigned_nodes_diagram = DeploymentUML(wf=workflows, net=network, cld=cloud, P=P_out)
     assigned_nodes_diagram.code_diagram()
+
+    objectives_plot = PlotObjectives(op=op, wf=workflows, pb=problem)
+    objectives_plot.show_plots()
 
     pass
 
