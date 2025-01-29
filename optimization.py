@@ -9,15 +9,15 @@ class Optimization:
         self.model = Model("TinyFaaS-Schedule")
 
         # Objective costs
-        self.obj = 0
-        self.obj_latency = 0
-        self.obj_transfer = 0
-        self.obj_latency_workflows = []
-        self.obj_transfer_workflows = []
-        self.obj_time = 0
-        self.obj_ram = 0
-        self.obj_time_workflows = []
-        self.obj_ram_workflows = []
+        self.obj: LinExpr = 0
+        self.obj_latency: LinExpr = 0
+        self.obj_transfer: LinExpr = 0
+        self.obj_latency_workflows: list[list[list[LinExpr]]]= []
+        self.obj_transfer_workflows: list[list[list[LinExpr]]] = []
+        self.obj_time: LinExpr = 0
+        self.obj_ram: LinExpr = 0
+        self.obj_time_workflows: list[list[list[LinExpr]]] = []
+        self.obj_ram_workflows: list[list[list[LinExpr]]] = []
 
         # Objective function weights
         # w1 for L and time, w2 for costs
@@ -55,19 +55,23 @@ class Optimizer(Optimization):
                 for node_sending in range(pb.num_nodes):
                     obj_latency = 0
                     obj_transfer = 0
+                    obj_latency_nn = 0 * LinExpr()
+                    obj_transfer_nn = 0 * LinExpr()
                     for node_receiving in range(pb.num_nodes):
-                        obj_latency = obj_latency + self.P[workflow, function, node_sending] \
+                        obj_latency = self.P[workflow, function, node_sending] \
                                       * self.P[workflow, function + 1, node_receiving] \
                                       * pb.L[node_sending, node_receiving]
                         self.obj_latency += obj_latency
 
-                        obj_transfer = obj_transfer + self.P[workflow, function, node_sending] \
+                        obj_transfer = self.P[workflow, function, node_sending] \
                                        * self.P[workflow, function + 1, node_receiving] \
                                        * pb.D[workflow, function, node_sending, node_receiving]
                         self.obj_transfer += obj_transfer
 
-                    obj_latency_nodes.append(obj_latency)
-                    obj_transfer_nodes.append(obj_transfer)
+                        obj_latency_nn += obj_latency
+                        obj_transfer_nn += obj_transfer
+                    obj_latency_nodes.append(obj_latency_nn)
+                    obj_transfer_nodes.append(obj_transfer_nn)
                 obj_latency_functions.append(obj_latency_nodes)
                 obj_transfer_functions.append(obj_transfer_nodes)
             self.obj_latency_workflows.append(obj_latency_functions)
@@ -116,7 +120,8 @@ class Optimizer(Optimization):
         # sum_n sum_m P_n,m,k * RAM_n,m <= MAX_k , for all k in {0 ..3} for all n, m
         for node in range(pb.num_nodes):
             self.model.addConstr(
-                quicksum(quicksum(self.P[workflow, function, node] * wf.funs_data[workflow][function]
+                quicksum(quicksum(self.P[workflow, function, node] * (wf.funs_data[workflow][function]
+                                                                      + wf.funs_sizes[workflow][function])
                                   for function in range(wf.num_funs))
                          for workflow in range(wf.num_workflows)) <= pb.ram_limits[node],
                 name='ram-limit-constraint')
@@ -137,8 +142,8 @@ class Optimizer(Optimization):
 class Optimizer2(Optimization):
     def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
         super().__init__()
-        self.var_dim = (wf.num_workflows, wf.num_funs, pb.num_nodes, pb.num_nodes)
-        self.P = self.model.addVars(*self.var_dim, vtype=GRB.INTEGER, name="P")  # P_n,m,i,j
+        self.var_dims = (wf.num_workflows, wf.num_funs, pb.num_nodes, pb.num_nodes)
+        self.P = self.model.addVars(*self.var_dims, vtype=GRB.INTEGER, name="P")  # P_n,m,i,j
 
         # expressions for L, and data transfer costs
         for workflow in range(wf.num_workflows):
@@ -148,19 +153,22 @@ class Optimizer2(Optimization):
                 obj_latency_nodes = []
                 obj_transfer_nodes = []
                 for node_sending in range(pb.num_nodes):
-                    obj_latency = 0
-                    obj_transfer = 0
+                    obj_latency_nn = 0 * LinExpr()
+                    obj_transfer_nn = 0 * LinExpr()
                     for node_receiving in range(pb.num_nodes):
-                        obj_latency = obj_latency + self.P[workflow, function, node_sending, node_receiving] \
+
+                        obj_latency = self.P[workflow, function, node_sending, node_receiving] \
                                       * pb.L[node_sending, node_receiving]
                         self.obj_latency += obj_latency
 
-                        obj_transfer = obj_transfer + self.P[workflow, function, node_sending, node_receiving] \
+                        obj_transfer = self.P[workflow, function, node_sending, node_receiving] \
                                        * pb.D[workflow, function, node_sending, node_receiving]
                         self.obj_transfer += obj_transfer
 
-                    obj_latency_nodes.append(obj_latency)
-                    obj_transfer_nodes.append(obj_transfer)
+                        obj_latency_nn += obj_latency
+                        obj_transfer_nn += obj_transfer
+                    obj_latency_nodes.append(obj_latency_nn)
+                    obj_transfer_nodes.append(obj_transfer_nn)
                 obj_latency_functions.append(obj_latency_nodes)
                 obj_transfer_functions.append(obj_transfer_nodes)
             self.obj_latency_workflows.append(obj_latency_functions)
@@ -174,6 +182,8 @@ class Optimizer2(Optimization):
                 obj_time_nodes = []
                 obj_ram_nodes = []
                 for node_sending in range(pb.num_nodes):
+                    obj_time_nn = 0 * LinExpr()
+                    obj_ram_nn = 0 * LinExpr()
                     for node_receiving in range(pb.num_nodes):
                         obj_time = self.P[workflow, function, node_sending, node_receiving] \
                                    * pb.T[workflow, function, node_sending]
@@ -183,8 +193,10 @@ class Optimizer2(Optimization):
                                   * pb.C[workflow, function, node_sending]
                         self.obj_ram += obj_ram
 
-                        obj_time_nodes.append(obj_time)
-                        obj_ram_nodes.append(obj_ram)
+                        obj_time_nn += obj_time
+                        obj_ram_nn += obj_ram
+                    obj_time_nodes.append(obj_time_nn)
+                    obj_ram_nodes.append(obj_ram_nn)
                 obj_time_functions.append(obj_time_nodes)
                 obj_ram_functions.append(obj_ram_nodes)
             self.obj_time_workflows.append(obj_time_functions)
@@ -216,7 +228,8 @@ class Optimizer2(Optimization):
         # sum_n sum_m sum_j P_n,m,i,j * RAM_n,m <= RAM_MAX_i , for all i
         for node_sending in range(pb.num_nodes):
             self.model.addConstr(quicksum(quicksum(quicksum(
-                self.P[workflow, function, node_sending, node_receiving] * wf.funs_data[workflow][function]
+                self.P[workflow, function, node_sending, node_receiving] * (wf.funs_data[workflow][function]
+                                                                            + wf.funs_sizes[workflow][function])
                 for node_receiving in range(pb.num_nodes))
                                                    for function in range(wf.num_funs))
                                           for workflow in range(wf.num_workflows)) <= pb.ram_limits[node_sending],
@@ -238,11 +251,14 @@ class Optimizer2(Optimization):
             for function in range(wf.num_funs - 1):
                 for node_receiving in range(pb.num_nodes):
                     self.model.addConstr(quicksum(self.P[workflow, function, node_sending, node_receiving]
-                                                  for node_sending in range(pb.num_nodes)) ==
+                                                  for node_sending in range(pb.num_nodes))
+                                         * wf.funs_counts[workflow][function + 1] ==
                                          quicksum(self.P[workflow, function + 1, node_receiving, node_receiving_next]
-                                                  for node_receiving_next in range(pb.num_nodes)),
+                                                  for node_receiving_next in range(pb.num_nodes))
+                                         * wf.funs_counts[workflow][function],
                                          name='edge-consistency-constraint?')
 
     def get_result(self):
-        # sum along last axis
-        return np.reshape(np.array([item.x for item in self.model.getVars()]), self.var_dim).sum(len(self.var_dim) - 1)
+        # sum along last axis (sum edges between nodes i, j)
+        return np.reshape(np.array([item.x for item in self.model.getVars()]), self.var_dims)\
+            .sum(len(self.var_dims) - 1)
