@@ -3,14 +3,22 @@
       "project": "workflows-413409",
       "pricing_RAM": 2.5e-06,
       "pricing_StartRequest": 4e-07,
-      "pricing_Storage_Transfer": 0.02,
-      "estimated_latency": 0.3
+      "pricing_Storage_Transfer": {
+        "upload": 0.0,
+        "download":0.02
+      },
+      "estimated_latency": 0.3,
+      "p_factor": 0.9
   },
   "aws": {
       "region": "us-east-1",
       "pricing_RAM": 1.667e-05,
       "pricing_StartRequest": 2e-07,
-      "pricing_Storage_Transfer": 0.03,
-      "estimated_latency": 0.1
+      "pricing_Storage_Transfer": {
+        "upload": 0.0,
+        "download": 0.03
+      },
+      "estimated_latency": 0.1,
+      "p_factor": 0.95
   }
 }
