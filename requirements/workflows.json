@@ -6,49 +6,64 @@
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
+      },
+      "online_mpc": {
+        "location": "local",
+        "time": 0.1,
+        "data": 0.001,
+        "size": 0.002,
+        "count": 1,
+        "run": "always"
       },
       "generate_init_samples": {
         "location": "any",
-        "time": 0.5,
+        "time": 0.05,
         "data": 0.0001,
         "size": 0.001,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "generate_samples": {
         "location": "any",
-        "time": 2,
-        "data": 0.04,
+        "time": 0.1,
+        "data": 0.001,
         "size": 0.002,
-        "count": 1
+        "count": 1500,
+        "run": "temp"
       },
       "train": {
         "location": "cloud",
-        "time": 1000,
+        "time": 600,
         "data": 0.04,
         "size": 2,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "end_train": {
-        "location": "local",
+        "location": "cloud",
         "time": 0,
-        "data": 0,
+        "data": 0.04,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "control": {
         "location": "local",
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "end_control": {
         "location": "local",
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       }
     }
   },
@@ -59,49 +74,64 @@
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
+      },
+      "online_mpc": {
+        "location": "local",
+        "time": 0.2,
+        "data": 0.05,
+        "size": 0.01,
+        "count": 1,
+        "run": "always"
       },
       "generate_init_samples": {
         "location": "any",
-        "time": 0.7,
+        "time": 0.5,
         "data": 0.0002,
         "size": 0.002,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "generate_samples": {
         "location": "any",
-        "time": 5,
-        "data": 1,
+        "time": 0.2,
+        "data": 0.008,
         "size": 0.01,
-        "count": 1
+        "count": 2000,
+        "run": "temp"
       },
       "train": {
         "location": "cloud",
-        "time": 1500,
-        "data": 3,
-        "size": 4,
-        "count": 1
+        "time": 1200,
+        "data": 0.08,
+        "size": 0.5,
+        "count": 1,
+        "run": "temp"
       },
       "end_train": {
-        "location": "local",
+        "location": "cloud",
         "time": 0,
-        "data": 0,
+        "data": 0.08,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "control": {
         "location": "local",
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "end_control": {
         "location": "local",
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       }
     }
   },
@@ -112,49 +142,64 @@
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
+      },
+      "online_mpc": {
+        "location": "local",
+        "time": 0.5,
+        "data": 0.007,
+        "size": 0.1,
+        "count": 1,
+        "run": "always"
       },
       "generate_init_samples": {
         "location": "any",
-        "time": 0.7,
+        "time": 1,
         "data": 0.002,
-        "size": 0.0015,
-        "count": 1
+        "size": 0.0001,
+        "count": 1,
+        "run": "temp"
       },
       "generate_samples": {
         "location": "any",
-        "time": 300,
-        "data": 20,
+        "time": 0.5,
+        "data": 0.007,
         "size": 0.1,
-        "count": 1
+        "count": 2500,
+        "run": "temp"
       },
       "train": {
         "location": "cloud",
-        "time": 5000,
-        "data": 20,
-        "size": 15,
-        "count": 1
+        "time": 1200,
+        "data": 0.5,
+        "size": 1,
+        "count": 1,
+        "run": "temp"
       },
       "end_train": {
-        "location": "local",
+        "location": "cloud",
         "time": 0,
-        "data": 0,
+        "data": 0.5,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "control": {
         "location": "local",
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "end_control": {
         "location": "local",
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       }
     }
   },
@@ -165,49 +210,65 @@
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
+      },
+      "online_mpc": {
+        "location": "cloud",
+        "time": 0.7,
+        "data": 0.004,
+        "size": 0.3,
+        "count": 1,
+        "run": "always"
       },
       "generate_init_samples": {
         "location": "any",
-        "time": 7,
+        "time": 0.3,
         "data": 0.002,
         "size": 0.0015,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "generate_samples": {
         "location": "any",
-        "time": 900,
-        "data": 200,
+        "time": 0.7,
+        "data": 0.004,
         "size": 0.3,
-        "count": 1
+        "count": 10000,
+        "run": "temp"
       },
       "train": {
         "location": "cloud",
-        "time": 50000,
-        "data": 200,
-        "size": 30,
-        "count": 1
+        "time": 3600,
+        "data": 1,
+        "size": 5,
+        "count": 1,
+        "run": "temp"
+
       },
       "end_train": {
-        "location": "local",
+        "location": "cloud",
         "time": 0,
-        "data": 0,
+        "data": 5,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "control": {
         "location": "local",
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       },
       "end_control": {
         "location": "local",
         "time": 0,
         "data": 0,
         "size": 0,
-        "count": 1
+        "count": 1,
+        "run": "temp"
       }
     }
   }
