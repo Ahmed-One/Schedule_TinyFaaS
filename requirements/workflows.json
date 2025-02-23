@@ -80,7 +80,7 @@
       "online_mpc": {
         "location": "local",
         "time": 0.2,
-        "data": 0.05,
+        "data": 0.008,
         "size": 0.01,
         "count": 1,
         "run": "always"
@@ -214,7 +214,7 @@
         "run": "temp"
       },
       "online_mpc": {
-        "location": "cloud",
+        "location": "local",
         "time": 0.7,
         "data": 0.004,
         "size": 0.3,

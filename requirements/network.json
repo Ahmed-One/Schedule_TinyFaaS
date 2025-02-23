@@ -1,4 +1,5 @@
 {
+  "latency": 0.01,
   "rate_down": 0.8,
   "rate_up": 0.1,
   "nodes": {
