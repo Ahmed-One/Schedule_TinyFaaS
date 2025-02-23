@@ -19,6 +19,7 @@ class Workflows:
         self.funs_local = {}
         self.funs_cloud = {}
         self.funs_persistent = {}
+        self.funs_temp = {}
         num_workflow_funs = []
 
         for wi, workflow in enumerate(workflows.values()):
@@ -26,6 +27,7 @@ class Workflows:
             self.funs_local[wi] = []
             self.funs_cloud[wi] = []
             self.funs_persistent[wi] = []
+            self.funs_temp[wi] = []
 
             # extract workflow function information
             for fi, function in enumerate(workflow["functions"]):
@@ -41,6 +43,8 @@ class Workflows:
                     self.funs_cloud[wi].append(fi)
                 if fun_info["run"] == "always":
                     self.funs_persistent[wi].append(fi)
+                elif fun_info["run"] == "temp":
+                    self.funs_temp[wi].append(fi)
 
             # store the number of functions in a workflow
             num_workflow_funs.append(len(workflow["functions"].keys()))
