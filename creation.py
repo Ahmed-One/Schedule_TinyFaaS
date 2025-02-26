@@ -51,25 +51,6 @@ class Problem:
                     self.T[workflow, function, node] = np.array(
                         wf.funs_times[workflow, function] / (self.p_factors[node]) * wf.funs_counts[workflow, function])
 
-        # Specific Time for transmitting a function instance data between nodes (second)
-        self.T_r = np.zeros((wf.num_workflows, wf.num_funs, self.num_nodes, self.num_nodes))  # T_r_n,m,i,j
-        for workflow in range(wf.num_workflows):
-            for function in range(wf.num_funs):
-                for node_sending in range(self.num_nodes):
-                    for node_receiving in range(self.num_nodes):
-                        # if local node uploads to cloud
-                        if node_sending < net.num <= node_receiving:
-                            data_transmit_rate = net.rate_up
-                        # if local node downloads from cloud
-                        elif node_sending >= net.num > node_receiving:
-                            data_transmit_rate = net.rate_down
-                        # if local node sends to local node or cloud to cloud
-                        else:
-                            data_transmit_rate = np.inf
-
-                        self.T_r[workflow, function, node_sending, node_receiving] = wf.funs_data[workflow, function] \
-                                                                                     / data_transmit_rate
-
         # Cost of transferring data (cost[$] = sum{data[GB] * cost[$/GB]})
         self.D = np.zeros((wf.num_workflows, wf.num_funs, self.num_nodes, self.num_nodes))  # D_n,m,i,j
         for workflow in range(wf.num_workflows):
