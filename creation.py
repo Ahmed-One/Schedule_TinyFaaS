@@ -48,8 +48,8 @@ class Problem:
         for workflow in range(wf.num_workflows):
             for function in range(wf.num_funs):
                 for node in range(self.num_nodes):
-                    self.T[workflow, function, node] = np.array(
-                        wf.funs_times[workflow, function] / (self.p_factors[node]) * wf.funs_counts[workflow, function])
+                    self.T[workflow, function, node] = np.array(wf.funs_times[workflow, function]
+                                                                / self.p_factors[node])
 
         # Cost of transferring data (cost[$] = sum{data[GB] * cost[$/GB]})
         self.D = np.zeros((wf.num_workflows, wf.num_funs, self.num_nodes, self.num_nodes))  # D_n,m,i,j
