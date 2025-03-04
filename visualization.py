@@ -59,6 +59,11 @@ class WorkflowTable:
         self.table = pd.DataFrame(entries, columns=headers)
         self.table.index.name = self.name
 
+    def insert_batch_vars(self, vs: dict):
+        x, y = vs['x'][0], vs['y'][0]
+        entries = [f"{x[i]}x{y[i]}" for i in range(len(x))]
+        self.table.loc[len(x)] = ['X*Y'] + entries
+
     def print(self):
         print("_" * len(self.name))
         # print(self.name)
@@ -66,24 +71,36 @@ class WorkflowTable:
         print(self.table)
 
 
-# Visualize and annotate optimization result using Pandas
+# Visualize and annotate optimization data using Pandas
 class WorkflowsTable:
-    def __init__(self, wf: Workflows, cld: CloudsInfo, P: np.ndarray):
+    def __init__(self, wf: Workflows, cld: CloudsInfo, data: dict):
+
         # list of workflows to print as tables
         self.workflow_tables = []
 
+        P = data['P']
+        if 'x' in data:
+            self.flagBatch = True
+            x = data['x']
+            y = data['y']
+
         # annotate node names
         num_nodes = P.shape[2]  # number of nodes (0: wf x 1: fun x 3: nodes)
-        names_cloud = list(cld.names_cloud)
+        names_cloud = list(cld.names)
         num_tiny = num_nodes - len(names_cloud)
         nodes = [f"Nd-{i}" for i in range(num_tiny)]
         [nodes.append(cloud_name) for cloud_name in names_cloud]
 
         # annotate function names and create tables
         for index, workflow in enumerate(wf.names_workflows):
-            name = workflow
+            name = abbreviate_wf_name(workflow)
             names_funs = wf.names_funs[index]
-            self.workflow_tables.append(WorkflowTable(name=name, functions=names_funs, nodes=nodes, p_matrix=P[index]))
+            table = WorkflowTable(name=name, functions=names_funs, nodes=nodes, p_matrix=P[index])
+            if self.flagBatch:
+                x = data['x'][index]
+                y = data['y'][index]
+                table.insert_batch_vars({'x': x, 'y': y})
+            self.workflow_tables.append(table)
 
     def print(self):
         # list to save tables as CSV
@@ -135,14 +152,14 @@ class WorkflowsUML(DiagramUML):
             self.uml_code.append(f"package \"{workflow}\"{{")
             # Json objects to encapsulate functions' name and properties
             for j, function in enumerate(wf.names_funs[i]):
-                # Check if function is local (properties are zero)
-                if j in wf.funs_local[i]:  # sketchy! assumes every workflow has at least one local function
+                # Check if function properties are zero
+                if sum([wf.funs_times[i, j], wf.funs_data[i, j], wf.funs_sizes[i, j]]) == 0:
                     self.uml_code.append(f"() \"{function}\" as {wf_name_abbrev}_{function}")
                 else:
                     self.uml_code.append(f"json \"{function}\" as {wf_name_abbrev}_{function} {{")
-                    self.uml_code.append(f"\"time\": {wf.funs_times[i][j]},")
-                    self.uml_code.append(f"\"data\": {wf.funs_data[i][j]},")
-                    self.uml_code.append(f"\"size\": {wf.funs_sizes[i][j]}")
+                    self.uml_code.append(f"\"time\": {wf.funs_times[i, j]},")
+                    self.uml_code.append(f"\"data\": {wf.funs_data[i, j]},")
+                    self.uml_code.append(f"\"size\": {wf.funs_sizes[i, j]}")
                     self.uml_code.append("}")
 
             # Connect consecutive functions with arrows
@@ -165,13 +182,14 @@ class NetworkUML(DiagramUML):
         self.uml_code.append("left to right direction")
 
         # cloud nodes with pricing displayed
-        for node in range(cld.num_clouds):
-            self.uml_code.append(f'cloud {cld.names_cloud[node]} [')  # start cloud
-            self.uml_code.append(f'\t<b>{cld.names_cloud[node]}')
+        for node in range(cld.num):
+            self.uml_code.append(f'cloud {cld.names[node]} [')  # start cloud
+            self.uml_code.append(f'\t<b>{cld.names[node]}')
             self.uml_code.append('\tCosts')
-            self.uml_code.append(f'\tRun (GBs): {cld.prices_cloud_ram[node]}')
-            self.uml_code.append(f'\tTransfer (GB): {cld.prices_cloud_transfer[node]}')
-            self.uml_code.append(f'\tRequest: {cld.prices_cloud_start[node]}')
+            self.uml_code.append(f'\tRun (GBs): {cld.prices_ram[node]}')
+            self.uml_code.append(f'\tTransfer (GB): {cld.prices_transfer_up[node]}')
+            self.uml_code.append(f'\tRequest: {cld.prices_start[node]}')
+            self.uml_code.append(f'\tp_factor: {cld.p_factors[node]}')
             self.uml_code.append(']')  # close cloud
         self.uml_code.append('\n')
 
@@ -179,12 +197,14 @@ class NetworkUML(DiagramUML):
         self.uml_code.append('frame Local{')  # start package
         self.uml_code.append('\tport router')
         nodes_codes = []
-        for node in range(net.num_tiny):
-            node_code = f'[Node-{node}\\nRAM: {net.rams_tiny[node]}GB]'
+        for node in range(net.num):
+            node_code = f'[Node-{node}\\n' \
+                        f'RAM: {net.rams[node]}GB\\n' \
+                        f'p_factor: {net.p_factors[node]}]'
             nodes_codes.append(node_code)
             self.uml_code.append(f'\t{node_code}')
-        # self.uml_code.append(f'\tlabel "Total RAM: {sum(net.rams_tiny)}"')
-        self.uml_code.append(f'\tnote as N\n\t\tTotal RAM: {sum(net.rams_tiny)}GB\n\tend note')
+
+        self.uml_code.append(f'\tnote as N\n\t\tTotal RAM: {sum(net.rams)}GB\n\tend note')
         self.uml_code.append('}\n')  # close package
 
         # connect nodes and router with latency annotated
@@ -192,27 +212,34 @@ class NetworkUML(DiagramUML):
             self.uml_code.append(f'{code} <-> router : {net.latency_local}')
 
         # connect cloud to router
-        for node in range(cld.num_clouds):
-            self.uml_code.append(f'{cld.names_cloud[node]} <--> router : {cld.latency_cloud[node]}')
+        for node in range(cld.num):
+            self.uml_code.append(f'{cld.names[node]} <--> router : {cld.latency[node]}')
 
     def code_diagram(self):
         self.write_uml_file()
 
 
 class DeploymentUML(DiagramUML):
-    def __init__(self, wf: Workflows, net: LocalNetwork, cld: CloudsInfo, P: np.ndarray):
+    def __init__(self, wf: Workflows, net: LocalNetwork, cld: CloudsInfo, data: dict):
         # initialize uml-diagram superclass
-        super().__init__(title="Optimal Deployment Solution", file_name="nodes_assigned_uml")
+        super().__init__(title="Optimal Deployment Solution", file_name="deployment_uml")
 
         # Create dictionary to hold information about occupiers of each node
-        self.nodes = {f"Node_{i}": {} for i in range(net.num_tiny)}
-        self.nodes.update({cloud_name: {} for cloud_name in cld.names_cloud})
-        self.num_tiny = net.num_tiny
+        self.nodes = {f"Node_{i}": {} for i in range(net.num)}
+        self.nodes.update({cloud_name: {} for cloud_name in cld.names})
+        self.num_tiny = net.num
+
+        P = data['P']
+        self.flagBatch = False
+        if 'x' in data:
+            self.flagBatch = True
+            x = data['x']
+            y = data['y']
 
         for i_node, node in enumerate(self.nodes):
             # Assign node ram limit
-            if i_node < net.num_tiny:
-                self.nodes[node]["ram_limit"] = net.rams_tiny[i_node]
+            if i_node < net.num:
+                self.nodes[node]["ram_limit"] = net.rams[i_node]
             else:
                 self.nodes[node]["ram_limit"] = np.inf
 
@@ -223,13 +250,23 @@ class DeploymentUML(DiagramUML):
                 if sum(abs(P[i_wf, :, i_node])) > 0:
                     self.nodes[node]["workflows"][workflow] = []
                     for i_f, function in enumerate(wf.names_funs[i_wf]):
+                        flagXY = False
+                        if self.flagBatch and wf.funs_counts[i_wf, i_f] > 1:
+                            flagXY = True
+                            ram_user = x[i_wf, :, i_node].item()
+                        else:
+                            ram_user = P[i_wf, i_f, i_node]
                         # Assign used ram
-                        self.nodes[node]["ram_used"] += P[i_wf, i_f, i_node] * wf.funs_data[i_wf][i_f]
+                        self.nodes[node]["ram_used"] += ram_user * (wf.funs_data[i_wf, i_f]
+                                                                    + wf.funs_sizes[i_wf, i_f])
                         # Assign deployed function(s)
                         if abs(P[i_wf, i_f, i_node]) > 0:
                             self.nodes[node]["workflows"][workflow].append(f"{function}: "
                                                                            f"{round(P[i_wf, i_f, i_node])}"
-                                                                           f"/{wf.funs_counts[i_wf][i_f]}")
+                                                                           f"/{wf.funs_counts[i_wf, i_f]}")
+                            if flagXY:
+                                self.nodes[node]["workflows"][workflow].append(f"\t\t ({int(x[i_wf, :, i_node])}"
+                                                                               f"x{int(y[i_wf, :, i_node])})")
 
     def code_a_node(self, node: str):
         node_data = self.nodes[node]
@@ -301,11 +338,12 @@ class PlotObjectives:
             workflow_transfer = 0
             workflow_ram = 0
             for function in range(len(wf.names_funs[workflow])-1):
-                for node in range(pb.num_nodes):
-                    workflow_latency += op.obj_latency_workflows[workflow][function][node].getValue()
-                    workflow_time += op.obj_time_workflows[workflow][function][node].getValue() / 1000
-                    workflow_transfer += op.obj_transfer_workflows[workflow][function][node].getValue()
-                    workflow_ram += op.obj_ram_workflows[workflow][function][node].getValue()
+                for nd_send in range(pb.num_nodes):
+                    for nd_recv in range(pb.num_nodes):
+                        workflow_latency += op.obj_latency_details[workflow, function, nd_send, nd_recv].getValue()
+                        workflow_transfer += op.obj_transfer_details[workflow, function, nd_send, nd_recv].getValue()
+                    workflow_time += op.obj_time_details[workflow, function, nd_send].getValue() / 1000
+                    workflow_ram += op.obj_ram_details[workflow, function, nd_send].getValue()
             self.workflows_latency.append(workflow_latency)
             self.workflows_time.append(workflow_time)
             self.workflows_transfer.append(workflow_transfer)
@@ -316,7 +354,7 @@ class PlotObjectives:
                 wedgeprops=dict(width=0.5))
         plt.title("Objective Costs")
         plt.text(x=-1, y=-1.2, s=f"Total: {self.total_objective}, Weights: {op.w_1}, {op.w_2}")
-        plt.savefig(f"{SAVE_PATH}Objectives_pie.png")
+        plt.savefig(f"{SAVE_PATH}objectives_pie.png")
 
         # subplot of the 4 quad objectives
         self.fig, self.ax = plt.subplots(2, 2)
@@ -329,7 +367,7 @@ class PlotObjectives:
         self.ax[1, 1].bar(x=self.workflows_names, height=self.workflows_ram)
         self.ax[1, 1].set_title("Workflows' Running Cost [$]")
         self.fig.tight_layout()
-        self.fig.savefig(f"{SAVE_PATH}Workflows_objectives.png")
+        self.fig.savefig(f"{SAVE_PATH}wf_objectives.png")
 
     def show_plots(self):
         self.fig.show()
