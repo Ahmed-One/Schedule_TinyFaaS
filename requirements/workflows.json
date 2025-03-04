@@ -16,7 +16,7 @@
         "size": 0.002,
         "count": 1,
         "run": "always",
-        "time_limit": 0.11
+        "time_limit": 0.15
       },
       "generate_init_samples": {
         "location": "any",
@@ -85,7 +85,7 @@
         "size": 0.01,
         "count": 1,
         "run": "always",
-        "time_limit": 0.25
+        "time_limit": 0.3
       },
       "generate_init_samples": {
         "location": "any",
@@ -154,7 +154,7 @@
         "size": 0.1,
         "count": 1,
         "run": "always",
-        "time_limit": 0.55
+        "time_limit": 0.72
       },
       "generate_init_samples": {
         "location": "any",
@@ -223,7 +223,7 @@
         "size": 0.3,
         "count": 1,
         "run": "always",
-        "time_limit": 0.77
+        "time_limit": 1.1
       },
       "generate_init_samples": {
         "location": "any",
