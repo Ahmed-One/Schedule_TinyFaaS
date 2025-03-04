@@ -323,7 +323,7 @@ class Optimizer4(Optimization):
         self.constrain_to_local_nodes(wf=wf, net=net)
         self.constrain_to_cloud_nodes(wf=wf, net=net)
         self.constrain_to_function_count(wf=wf, pb=pb)
-        self.constrain_to_ram_limit_no_dependants(wf=wf, pb=pb)
+        self.constrain_to_ram_limit_no_temps(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.formulate_d()
 
@@ -430,7 +430,7 @@ class Optimizer4(Optimization):
 
         return obj_time, obj_ram
 
-    def constrain_to_ram_limit_no_dependants(self, wf: Workflows, pb: Problem):
+    def constrain_to_ram_limit_no_temps(self, wf: Workflows, pb: Problem):
         """
         RAM usage is limited by the max-using temporary function in a workflow
         Thus, RAM-limit applies to max usage plus persistent functions
@@ -517,7 +517,7 @@ class Optimizer5(Optimizer4):
         self.constrain_to_local_nodes(wf=wf, net=net)
         self.constrain_to_cloud_nodes(wf=wf, net=net)
         self.constrain_to_function_count(wf=wf, pb=pb)
-        self.constrain_to_ram_limit_no_dependants(wf=wf, pb=pb)
+        self.constrain_to_ram_limit_no_temps(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.linearize_d()
 
@@ -613,7 +613,7 @@ class Optimizer6(Optimizer5):
         self.constrain_to_local_nodes(wf=wf, net=net)
         self.constrain_to_cloud_nodes(wf=wf, net=net)
         self.constrain_to_function_count(wf=wf, pb=pb)
-        self.constrain_to_ram_limit_no_dependants(wf=wf, pb=pb)
+        self.constrain_to_ram_limit_no_temps(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.formulate_d()
         self.constrain_batch_vars_nonlinear(wf=wf, pb=pb)
@@ -622,7 +622,7 @@ class Optimizer6(Optimizer5):
         # self.model.params.NumericFocus = 3
         self.sum_objectives()
 
-    def constrain_to_ram_limit_no_dependants(self, wf: Workflows, pb: Problem):
+    def constrain_to_ram_limit_no_temps(self, wf: Workflows, pb: Problem):
         # RAM usage is limited by the max-using temporary function in a workflow
         # Thus, RAM-limit applies to max usage plus persistent functions
         # A variable for max temporary RAM usage in a workflow
@@ -769,7 +769,7 @@ class Optimizer7(Optimizer6):
         self.constrain_to_local_nodes(wf=wf, net=net)
         self.constrain_to_cloud_nodes(wf=wf, net=net)
         self.constrain_to_function_count(wf=wf, pb=pb)
-        self.constrain_to_ram_limit_no_dependants(wf=wf, pb=pb)
+        self.constrain_to_ram_limit_no_temps(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.constrain_y_deviation(wf=wf, net=net, pb=pb, relaxation=0)
         self.linearize_d()

@@ -10,19 +10,24 @@ def run():
     cloud = CloudsInfo(datapath="requirements//cloud.json")
 
     # Check if enough tinyFaaS nnodes are available for the amount of workflows
-    check_network_validity(num_workflows=workflows.num_workflows, num_tiny=network.num_tiny)
+    check_network_validity(num_workflows=workflows.num_workflows, num_tiny=network.num)
 
     # Create problem parameters and optimize the for the solution
     problem = Problem(wf=workflows, net=network, cld=cloud)
-    op = Optimizer2(wf=workflows, net=network, pb=problem)
+    op = Optimizer4(wf=workflows, net=network, pb=problem)
+    op.setup()
     op.w_1 = 1
     op.w_2 = 470000
     op.solve()
+    assert op.model.Status != GRB.INFEASIBLE, "Model is Infeasible!"
 
-    # Print result
-    P_out = op.get_result()
+    # Print data
+    results = {'P': op.get_result(v='P')}
+    if op.flagBatch:
+        results['x'] = op.get_result(v='x')
+        results['y'] = op.get_result(v='y')
 
-    tables = WorkflowsTable(wf=workflows, cld=cloud, P=P_out)
+    tables = WorkflowsTable(wf=workflows, cld=cloud, data=results)
     tables.print()
 
     workflows_diagram = WorkflowsUML(wf=workflows)
@@ -31,7 +36,7 @@ def run():
     network_diagram = NetworkUML(net=network, cld=cloud)
     network_diagram.code_diagram()
 
-    assigned_nodes_diagram = DeploymentUML(wf=workflows, net=network, cld=cloud, P=P_out)
+    assigned_nodes_diagram = DeploymentUML(wf=workflows, net=network, cld=cloud, data=results)
     assigned_nodes_diagram.code_diagram()
 
     objectives_plot = PlotObjectives(op=op, wf=workflows, pb=problem)
