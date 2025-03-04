@@ -20,6 +20,7 @@ class Workflows:
         self.funs_cloud = {}
         self.funs_persistent = {}
         self.funs_temp = {}
+        self.funs_time_limited = {}
         num_workflow_funs = []
 
         for wi, workflow in enumerate(workflows.values()):
@@ -45,6 +46,8 @@ class Workflows:
                     self.funs_persistent[wi].append(fi)
                 elif fun_info["run"] == "temp":
                     self.funs_temp[wi].append(fi)
+                if "time_limit" in fun_info:
+                    self.funs_time_limited[(wi, fi)] = fun_info["time_limit"]
 
             # store the number of functions in a workflow
             num_workflow_funs.append(len(workflow["functions"].keys()))
