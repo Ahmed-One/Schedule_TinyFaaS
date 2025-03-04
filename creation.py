@@ -29,6 +29,7 @@ class Problem:
                         if node_sending == node_receiving:
                             transmission_rate = np.inf
                         elif node_sending < net.num and node_receiving < net.num:
+                            # tinyFaaS local transmission
                             transmission_rate = net.rate_down
                         elif node_sending < net.num <= node_receiving:
                             # tinyFaaS uploading to cloud
