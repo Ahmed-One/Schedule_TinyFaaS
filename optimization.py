@@ -334,10 +334,10 @@ class Optimizer4(Optimization):
             for function in range(wf.num_funs - 1):
                 for node_sending in range(pb.num_nodes):
                     for node_receiving in range(pb.num_nodes):
-                        self.d[workflow, function, node_sending, node_receiving] \
-                            = (1 / wf.funs_counts[workflow, function]) \
-                              * self.P[workflow, function, node_sending] \
-                              * self.P[workflow, function + 1, node_receiving]
+                        self.model.addConstr(self.d[workflow, function, node_sending, node_receiving]
+                                             == (1 / wf.funs_counts[workflow, function])
+                                             * self.P[workflow, function, node_sending]
+                                             * self.P[workflow, function + 1, node_receiving])
 
     def formulate_objective_latency_n_transfer_loop(self, expression_latency_n_transfer: callable):
         """
@@ -530,9 +530,9 @@ class Optimizer5(Optimizer4):
             for function in range(wf.num_funs - 1):
                 for node_sending in range(pb.num_nodes):
                     for node_receiving in range(pb.num_nodes):
-                        self.d[workflow, function, node_sending, node_receiving] \
-                            = (1 / wf.funs_counts[workflow, function]) \
-                              * self.w[workflow, function, node_sending, node_receiving]
+                        self.model.addConstr(self.d[workflow, function, node_sending, node_receiving]
+                                             == (1 / wf.funs_counts[workflow, function])
+                                             * self.w[workflow, function, node_sending, node_receiving])
 
                         # 1. Upper bound: w <= count_m * P_m+1,j + count_m+1 * P_m,i - count_m * count_m+1
                         self.model.addConstr(self.w[workflow, function, node_sending, node_receiving]
