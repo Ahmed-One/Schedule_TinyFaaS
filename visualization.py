@@ -79,6 +79,7 @@ class WorkflowsTable:
         self.workflow_tables = []
 
         P = data['P']
+        self.flagBatch = False
         if 'x' in data:
             self.flagBatch = True
             x = data['x']
