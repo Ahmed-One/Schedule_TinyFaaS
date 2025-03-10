@@ -27,7 +27,7 @@ class Optimization:
         self.obj_ram_details: {LinExpr} = {}  # Function running cost categorized
 
         # Objective function weights
-        # w1 for L and time, w2 for costs
+        # w1 for latency and time, w2 for costs
         self.w_1, self.w_2 = 1, 470000
 
     @abstractmethod
@@ -617,7 +617,7 @@ class Optimizer6(Optimizer5):
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.formulate_d()
         self.constrain_batch_vars_nonlinear(wf=wf, pb=pb)
-        self.constrain_y_deviation(wf=wf, net=net, pb=pb, relaxation=50)
+        self.constrain_y_deviation(wf=wf, net=net, pb=pb, relaxation=10)
 
         # self.model.params.NumericFocus = 3
         self.sum_objectives()
@@ -661,10 +661,10 @@ class Optimizer6(Optimizer5):
                     self.model.addConstr(self.P[workflow, function, node] ==
                                          self.x[workflow, function, node] * self.y[workflow, function, node])
 
-    def constrain_y_deviation(self, wf: Workflows, net:LocalNetwork, pb:Problem, relaxation=50):
+    def constrain_y_deviation(self, wf: Workflows, net:LocalNetwork, pb:Problem, relaxation=20):
         # collect sets of different p_factors
         p_factors_set = set(pb.p_factors)
-        p_factors_nodes = {p: np.argwhere(p == pb.p_factors).tolist()[0] for p in p_factors_set}
+        p_factors_nodes = {p.item(): np.argwhere(p == pb.p_factors).flatten().tolist() for p in p_factors_set}
         relaxation_factor = relaxation
         node_firsts_list = []
         worst_efficiency = min(p_factors_set)
@@ -691,7 +691,8 @@ class Optimizer6(Optimizer5):
                         self.model.addConstr(
                             (self.y[workflow, function, slowest_node] * pb.T[workflow, function, slowest_node].item()
                              - self.y[workflow, function, node] * pb.T[workflow, function, node].item())
-                            <= (relaxation_factor * (net.p_factors[node] - net.p_factors[slowest_node])))
+                            <= (relaxation_factor * (pb.T[workflow, function, slowest_node].item()
+                                                     - pb.T[workflow, function, node].item())))
 
     def formulate_batch_vars(self):
         wf, pb = self.wf, self.pb
@@ -771,7 +772,7 @@ class Optimizer7(Optimizer6):
         self.constrain_to_function_count(wf=wf, pb=pb)
         self.constrain_to_ram_limit_no_temps(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
-        self.constrain_y_deviation(wf=wf, net=net, pb=pb, relaxation=0)
+        self.constrain_y_deviation(wf=wf, net=net, pb=pb, relaxation=10)
         self.linearize_d()
 
         # self.model.params.NumericFocus = 3
@@ -799,7 +800,7 @@ class Optimizer7(Optimizer6):
                         self.x_vals[workflow, function, node] = \
                             generate_breakpoints(max_value=wf.funs_counts[workflow, function])
                         self.y_vals[workflow, function, node] = \
-                            generate_breakpoints(max_value=np.ceil(wf.funs_counts[workflow, function] / 4))
+                            generate_breakpoints(max_value=np.ceil(wf.funs_counts[workflow, function] / 10))
                         # Compute P = x * y at breakpoints
                         self.p_vals[workflow, function, node] = np.array(
                             [[xi * yi for yi in self.y_vals[workflow, function, node]]
