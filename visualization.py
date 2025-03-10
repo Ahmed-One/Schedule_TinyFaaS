@@ -160,7 +160,11 @@ class WorkflowsUML(DiagramUML):
                     self.uml_code.append(f"json \"{function}\" as {wf_name_abbrev}_{function} {{")
                     self.uml_code.append(f"\"time\": {wf.funs_times[i, j]},")
                     self.uml_code.append(f"\"data\": {wf.funs_data[i, j]},")
-                    self.uml_code.append(f"\"size\": {wf.funs_sizes[i, j]}")
+                    if wf.funs_counts[i, j] > 1:
+                        self.uml_code.append(f"\"size\": {wf.funs_sizes[i, j]},")
+                        self.uml_code.append(f"\"count\": {wf.funs_counts[i, j]}")
+                    else:
+                        self.uml_code.append(f"\"size\": {wf.funs_sizes[i, j]}")
                     self.uml_code.append("}")
 
             # Connect consecutive functions with arrows
@@ -334,19 +338,19 @@ class PlotObjectives:
         self.workflows_transfer = []
         self.workflows_ram = []
         for workflow in range(wf.num_workflows):
-            workflow_latency = 0
-            workflow_time = 0
+            workflow_latency = []
+            workflow_time = []
             workflow_transfer = 0
             workflow_ram = 0
             for function in range(len(wf.names_funs[workflow])-1):
                 for nd_send in range(pb.num_nodes):
                     for nd_recv in range(pb.num_nodes):
-                        workflow_latency += op.obj_latency_details[workflow, function, nd_send, nd_recv].getValue()
+                        workflow_latency.append(op.obj_latency_details[workflow, function, nd_send, nd_recv].getValue())
                         workflow_transfer += op.obj_transfer_details[workflow, function, nd_send, nd_recv].getValue()
-                    workflow_time += op.obj_time_details[workflow, function, nd_send].getValue() / 1000
+                    workflow_time.append(op.obj_time_details[workflow, function, nd_send].getValue() / 1000)
                     workflow_ram += op.obj_ram_details[workflow, function, nd_send].getValue()
-            self.workflows_latency.append(workflow_latency)
-            self.workflows_time.append(workflow_time)
+            self.workflows_latency.append(max(workflow_latency))
+            self.workflows_time.append(max(workflow_time))
             self.workflows_transfer.append(workflow_transfer)
             self.workflows_ram.append(workflow_ram)
 
