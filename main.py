@@ -14,10 +14,10 @@ def run():
 
     # Create problem parameters and optimize the for the solution
     problem = Problem(wf=workflows, net=network, cld=cloud)
-    op = Optimizer4(wf=workflows, net=network, pb=problem)
-    op.setup()
+    op = Optimizer7(wf=workflows, net=network, pb=problem)
     op.w_1 = 1
     op.w_2 = 470000
+    op.setup()
     op.solve()
     assert op.model.Status != GRB.INFEASIBLE, "Model is Infeasible!"
 
