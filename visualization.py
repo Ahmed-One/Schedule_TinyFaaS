@@ -338,19 +338,23 @@ class PlotObjectives:
         self.workflows_transfer = []
         self.workflows_ram = []
         for workflow in range(wf.num_workflows):
-            workflow_latency = []
-            workflow_time = []
+            workflow_latency = 0
+            workflow_time = 0
             workflow_transfer = 0
             workflow_ram = 0
             for function in range(len(wf.names_funs[workflow])-1):
+                function_latency = []
+                function_time = []
                 for nd_send in range(pb.num_nodes):
                     for nd_recv in range(pb.num_nodes):
-                        workflow_latency.append(op.obj_latency_details[workflow, function, nd_send, nd_recv].getValue())
+                        function_latency.append(op.obj_latency_details[workflow, function, nd_send, nd_recv].getValue())
                         workflow_transfer += op.obj_transfer_details[workflow, function, nd_send, nd_recv].getValue()
-                    workflow_time.append(op.obj_time_details[workflow, function, nd_send].getValue() / 1000)
+                    function_time.append(op.obj_time_details[workflow, function, nd_send].getValue())
                     workflow_ram += op.obj_ram_details[workflow, function, nd_send].getValue()
-            self.workflows_latency.append(max(workflow_latency))
-            self.workflows_time.append(max(workflow_time))
+                workflow_latency += max(function_latency)
+                workflow_time += max(function_time)
+            self.workflows_latency.append(workflow_latency)
+            self.workflows_time.append(workflow_time)
             self.workflows_transfer.append(workflow_transfer)
             self.workflows_ram.append(workflow_ram)
 
