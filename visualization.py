@@ -59,9 +59,13 @@ class WorkflowTable:
         self.table = pd.DataFrame(entries, columns=headers)
         self.table.index.name = self.name
 
+        # cast all numerics to integer
+        col_types = {header: 'int32' for header in self.table.columns[1:]}
+        self.table = self.table.astype(col_types)
+
     def insert_batch_vars(self, vs: dict):
         x, y = vs['x'][0], vs['y'][0]
-        entries = [f"{x[i]}x{y[i]}" for i in range(len(x))]
+        entries = [f"{int(x[i])}x{int(y[i])}" for i in range(len(x))]
         self.table.loc[len(x)] = ['X*Y'] + entries
 
     def print(self):
