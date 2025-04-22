@@ -40,6 +40,20 @@ class Optimization:
         self.obj = self.w_1 * (self.obj_latency + self.obj_time) + self.w_2 * (self.obj_transfer + self.obj_ram)
         self.model.setObjective(self.obj, GRB.MINIMIZE)
 
+    def precalculate_weights(self, wf: Workflows, pb: Problem):
+        sum_time = 0
+        sum_cost = 0
+        for workflow in range(wf.num_workflows):
+            for function in range(wf.num_funs):
+                sum_time += wf.funs_counts[workflow, function] \
+                            * (np.mean(pb.T[workflow, function]) + np.mean(pb.L[workflow, function]))
+                sum_cost += wf.funs_counts[workflow, function] \
+                            * (np.mean(pb.D[workflow, function]) + np.mean(pb.C[workflow, function]))
+
+        ratio_timecost = sum_time / sum_cost
+        self.w_2 = ratio_timecost
+        self.w_1 = 1
+
     # Solve model
     def solve(self):
         self.model.setParam("OutputFlag", 1)
@@ -460,7 +474,7 @@ class Optimizer4(Optimization):
                 sum_max_wf_ram += self.X[workflow, nd]
             self.model.addConstr(sum_max_wf_ram + sum_fn_pers_ram <= pb.ram_limits[nd], name='ram-limit-constraint')
 
-    def constrain_to_time_limit(self, wf:Workflows, pb: Problem):
+    def constrain_to_time_limit(self, wf: Workflows, pb: Problem):
         # Constrain time-limited functions
         for workflow in range(wf.num_workflows):
             for function in range(wf.num_funs):
@@ -474,9 +488,9 @@ class Optimizer4(Optimization):
                     latency_out = 0 * LinExpr()
                     for nd_prev in range(pb.num_nodes):  # node of f - 1
                         for nd_f in range(pb.num_nodes):  # node of f
-                            latency_in = self.d[workflow, function - 1, nd_prev, nd_f]\
+                            latency_in = self.d[workflow, function - 1, nd_prev, nd_f] \
                                          * pb.L[workflow, function - 1, nd_prev, nd_f]
-                            latency_out = self.d[workflow, function, nd_f, nd_prev]\
+                            latency_out = self.d[workflow, function, nd_f, nd_prev] \
                                           * pb.L[workflow, function, nd_f, nd_prev]
                             time_execution = pb.T[workflow, function, nd_f]
                             total_time = latency_in + time_execution + latency_out
@@ -661,7 +675,7 @@ class Optimizer6(Optimizer5):
                     self.model.addConstr(self.P[workflow, function, node] ==
                                          self.x[workflow, function, node] * self.y[workflow, function, node])
 
-    def constrain_y_deviation(self, wf: Workflows, net:LocalNetwork, pb:Problem, relaxation=20):
+    def constrain_y_deviation(self, wf: Workflows, net: LocalNetwork, pb: Problem, relaxation=20):
         # collect sets of different p_factors
         p_factors_set = set(pb.p_factors)
         p_factors_nodes = {p.item(): np.argwhere(p == pb.p_factors).flatten().tolist() for p in p_factors_set}
@@ -738,6 +752,7 @@ class Optimizer6(Optimizer5):
             obj_ram = self.P[index] * pb.C[index] + self.x[index] * pb.C_s[index]
 
         return obj_time, obj_ram
+
 
 # ======================================================================================================================
 # ======================================================================================================================
@@ -855,7 +870,6 @@ class Optimizer7(Optimizer6):
                         #     self.model.addSOS(GRB.SOS_TYPE2, [self.lambda_vars[workflow, function, node][i, j]
                         #                                       for i in
                         #                                       range(len(self.x_vals[workflow, function, node]))])
-
 
 # ======================================================================================================================
 # ======================================================================================================================
