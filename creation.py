@@ -39,7 +39,7 @@ class Problem:
                             transmission_rate = net.rate_down
                         elif node_sending >= net.num and node_receiving >= net.num:
                             # transfer between clouds
-                            transmission_rate = np.inf
+                            transmission_rate = 5 * net.rate_down
 
                         self.L[workflow, function, node_sending, node_receiving] = \
                             wf.funs_data[workflow, function] / transmission_rate
