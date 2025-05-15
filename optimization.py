@@ -10,7 +10,8 @@ class Optimization:
     def __init__(self, var_dim: tuple):
         self.model = Model("TinyFaaS-Schedule")
         self.var_dim = var_dim
-        self.P = self.model.addVars(*self.var_dim, vtype=GRB.INTEGER, name="P")
+        self.type = GRB.INTEGER
+        self.P = self.model.addVars(*self.var_dim, vtype=self.type, name="P")
 
         # Optimizer normally does not optimize for batch processing
         self.flagBatch = False
@@ -126,11 +127,7 @@ class Optimization:
             # workflows x function x nodes
             dims = (self.var_dim[0], 1, self.var_dim[-1])
 
-        vs = [var for var in self.model.getVars() if v in var.VarName]
-
-        if type(self) == Optimizer1:
-            vs = vs[int(len(vs)/2):]
-
+        vs = [var for var in self.model.getVars() if v in var.VarName and var.VType == self.type]
         return np.reshape(np.array([item.x for item in vs]), dims)
 
 
@@ -143,7 +140,8 @@ class Optimizer1(Optimization):
         self.var_dim = (wf.num_workflows, wf.num_funs, pb.num_nodes)  # P_n,m,i
         super().__init__(var_dim=self.var_dim)
 
-        self.P = self.model.addVars(*self.var_dim, vtype=GRB.BINARY, name="P")
+        self.type = GRB.BINARY
+        self.P = self.model.addVars(*self.var_dim, vtype=self.type, name="P")
 
         self.wf, self.net, self.pb = wf, net, pb
 
