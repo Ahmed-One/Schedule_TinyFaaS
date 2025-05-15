@@ -127,17 +127,23 @@ class Optimization:
             dims = (self.var_dim[0], 1, self.var_dim[-1])
 
         vs = [var for var in self.model.getVars() if v in var.VarName]
+
+        if type(self) == Optimizer1:
+            vs = vs[int(len(vs)/2):]
+
         return np.reshape(np.array([item.x for item in vs]), dims)
 
 
 # ======================================================================================================================
 # ======================================================================================================================
 # ======================================================================================================================
-
+# Initial formulation. P is binary. See thesis Ch. 05
 class Optimizer1(Optimization):
     def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
         self.var_dim = (wf.num_workflows, wf.num_funs, pb.num_nodes)  # P_n,m,i
         super().__init__(var_dim=self.var_dim)
+
+        self.P = self.model.addVars(*self.var_dim, vtype=GRB.BINARY, name="P")
 
         self.wf, self.net, self.pb = wf, net, pb
 
@@ -152,13 +158,13 @@ class Optimizer1(Optimization):
                         obj_latency = self.P[workflow, function, node_sending] \
                                       * self.P[workflow, function + 1, node_receiving] \
                                       * pb.L[workflow, function, node_sending, node_receiving] \
-                                      / wf.funs_counts[workflow, function]
+                                      * wf.funs_counts[workflow, function]
                         self.obj_latency += obj_latency
 
                         obj_transfer = self.P[workflow, function, node_sending] \
                                        * self.P[workflow, function + 1, node_receiving] \
                                        * pb.D[workflow, function, node_sending, node_receiving] \
-                                       / wf.funs_counts[workflow, function]
+                                       * wf.funs_counts[workflow, function]
                         self.obj_transfer += obj_transfer
 
                         self.obj_latency_details[workflow, function, node_sending, node_receiving] = obj_latency
@@ -168,10 +174,12 @@ class Optimizer1(Optimization):
         for workflow in range(wf.num_workflows):
             for function in range(wf.num_funs):
                 for node in range(pb.num_nodes):
-                    obj_time = self.P[workflow, function, node] * pb.T[workflow, function, node]
+                    obj_time = self.P[workflow, function, node] * pb.T[workflow, function, node]\
+                               * wf.funs_counts[workflow, function]
                     self.obj_time += obj_time
 
-                    obj_ram = self.P[workflow, function, node] * pb.C[workflow, function, node]
+                    obj_ram = self.P[workflow, function, node] * pb.C[workflow, function, node]\
+                              * wf.funs_counts[workflow, function] + pb.C_s[workflow, function, node]
                     self.obj_ram += obj_ram
 
                     self.obj_time_details[workflow, function, node] = obj_time
@@ -183,8 +191,22 @@ class Optimizer1(Optimization):
 
         self.constrain_to_local_nodes(wf=wf, net=net)
         self.constrain_to_cloud_nodes(wf=wf, net=net)
-        self.constrain_to_ram_limit(wf=wf, pb=pb)
-        self.constrain_to_function_count(wf=wf, pb=pb)
+
+        # Constrain to ram-limit
+        for node in range(pb.num_nodes):
+            self.model.addConstr(
+                quicksum(quicksum(self.P[workflow, function, node] * (wf.funs_data[workflow, function]
+                                                                      + wf.funs_sizes[workflow, function])
+                                  * wf.funs_counts[workflow, function]
+                                  for function in range(wf.num_funs))
+                         for workflow in range(wf.num_workflows)) <= pb.ram_limits[node],
+                name='ram-limit-constraint')
+
+        # Each function can only be assigned once
+        for workflow in range(wf.num_workflows):
+            for function in range(wf.num_funs):
+                self.model.addConstr(quicksum(self.P[workflow, function, node] for node in range(pb.num_nodes)) == 1,
+                                     name='function-assignment-limit')
 
 
 # ======================================================================================================================
