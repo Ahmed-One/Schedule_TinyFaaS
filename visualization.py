@@ -331,9 +331,15 @@ class PlotObjectives:
     def __init__(self, op: Optimization, wf: Workflows, pb: Problem):
         self.total_objective = op.obj.getValue()
         self.main_objectives = {"latency": op.obj_latency.getValue(),
-                                "time/1000": op.obj_time.getValue() / 1000,
+                                "time": op.obj_time.getValue(), #/ 1000,
                                 "transfer": op.obj_transfer.getValue(),
                                 "ram": op.obj_ram.getValue()}
+
+        # print some data
+        print()
+        print(f'Objective: {self.total_objective:.3f}')
+        objs = self.main_objectives
+        [print(f'{key}: {value:.3f}') for key, value in objs.items()]
 
         # Get workflow objective costs
         self.workflows_names = [abbreviate_wf_name(workflow) for workflow in wf.names_workflows]
@@ -366,7 +372,7 @@ class PlotObjectives:
         plt.pie(x=list(self.main_objectives.values()), labels=list(self.main_objectives.keys()),
                 wedgeprops=dict(width=0.5))
         plt.title("Objective Costs")
-        plt.text(x=-1, y=-1.2, s=f"Total: {self.total_objective}, Weights: {op.w_1}, {op.w_2}")
+        plt.text(x=-1, y=-1.2, s=f"Total: {self.total_objective:.3f}, Weights: {op.w_1:.3f}, {op.w_2:.3f}")
         plt.savefig(f"{SAVE_PATH}objectives_pie.png")
 
         # subplot of the 4 quad objectives
