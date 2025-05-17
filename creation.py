@@ -16,6 +16,7 @@ class Problem:
         self.prices_start = np.append(np.zeros(net.num), cld.prices_start)
         self.ram_limits = np.append(np.array(net.rams), np.inf * np.ones(cld.num))
         self.p_factors = np.append(np.array(net.p_factors), cld.p_factors)
+        self.taus = np.append(np.array(net.taus), cld.taus)
 
         # Coefficient matrices
 

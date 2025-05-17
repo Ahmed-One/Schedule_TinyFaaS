@@ -80,11 +80,13 @@ class LocalNetwork:
         self.num = len(network_config["nodes"])
         self.rams = []  # available runtime memory
         self.p_factors = []  # parallelization efficiency
+        self.taus = []  # startup time factor [s/GB]
         self.rate_up = network_config["rate_up"]  # upload speed [GB/s]
         self.rate_down = network_config["rate_down"]  # download speed [GB/s]
         for node in network_config["nodes"]:
             self.rams.append(network_config["nodes"][node]["ram"])  # GB
             self.p_factors.append(network_config["nodes"][node]["p_factor"])  # parallelization efficacy factor
+            self.taus.append(network_config["nodes"][node]["tau"])  # startup time factor
 
 
 def check_network_validity(num_workflows: int, num_tiny: int):
@@ -108,6 +110,7 @@ class CloudsInfo:
         self.prices_start = []
         self.latency = []
         self.p_factors = []
+        self.taus = []
         for provider in cloud_config.values():
             self.prices_transfer_up.append(provider["pricing_Storage_Transfer"]["upload"])  # $/GB
             self.prices_transfer_down.append(provider["pricing_Storage_Transfer"]["download"])  # $/GB
@@ -115,3 +118,4 @@ class CloudsInfo:
             self.prices_start.append(provider["pricing_StartRequest"])  # $/request
             self.latency.append(provider["estimated_latency"])  # second
             self.p_factors.append(provider["p_factor"])  # parallelization efficacy factor
+            self.taus.append(provider["tau"])  # startup time factor in second per GB
