@@ -92,7 +92,7 @@ class LocalNetwork:
 def check_network_validity(num_workflows: int, num_tiny: int):
     # Check if available nodes are enough for workflows
     if num_workflows > num_tiny:
-        raise ValueError(f"TinyFaaS nodes ({num_tiny} are nor enough for {num_workflows} workflows)")
+        raise ValueError(f"TinyFaaS nodes ({num_tiny} are not enough for {num_workflows} workflows)")
 
 
 class CloudsInfo:
