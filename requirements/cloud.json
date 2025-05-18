@@ -8,7 +8,8 @@
         "download":0.02
       },
       "estimated_latency": 0.3,
-      "p_factor": 0.9
+      "p_factor": 0.9,
+      "tau": 0.5
   },
   "aws": {
       "region": "us-east-1",
@@ -19,6 +20,7 @@
         "download": 0.03
       },
       "estimated_latency": 0.1,
-      "p_factor": 0.95
+      "p_factor": 0.95,
+      "tau": 0.5
   }
 }

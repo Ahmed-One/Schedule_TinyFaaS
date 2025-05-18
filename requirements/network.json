@@ -5,27 +5,33 @@
   "nodes": {
     "node-0":{
       "ram": 4,
-      "p_factor": 0.7
+      "p_factor": 0.7,
+      "tau": 0.7
     },
     "node-1": {
       "ram": 4,
-      "p_factor": 0.7
+      "p_factor": 0.7,
+      "tau": 0.7
     },
     "node-2": {
       "ram": 6,
-      "p_factor": 0.7
+      "p_factor": 0.7,
+      "tau": 0.7
     },
     "node-3": {
       "ram": 6,
-      "p_factor": 0.7
+      "p_factor": 0.7,
+      "tau": 0.7
     },
     "node-4": {
       "ram": 4,
-      "p_factor": 0.8
+      "p_factor": 0.8,
+      "tau": 0.6
     },
     "node-5": {
       "ram": 6,
-      "p_factor": 0.8
+      "p_factor": 0.8,
+      "tau": 0.6
     }
   }
 }
