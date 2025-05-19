@@ -32,6 +32,16 @@
       "ram": 6,
       "p_factor": 0.8,
       "tau": 0.6
+    },
+    "node-6": {
+      "ram": 16,
+      "p_factor": 0.6,
+      "tau": 0.8
+    },
+    "node-7": {
+      "ram": 4,
+      "p_factor": 0.8,
+      "tau": 0.7
     }
   }
 }
