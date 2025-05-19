@@ -48,6 +48,8 @@ class Workflows:
                     self.funs_temp[wi].append(fi)
                 if "time_limit" in fun_info:
                     self.funs_time_limited[(wi, fi)] = fun_info["time_limit"]
+                if "control_rate" in fun_info:
+                    self.funs_time_limited[(wi, fi)] = fun_info["control_rate"]
 
             # store the number of functions in a workflow
             num_workflow_funs.append(len(workflow["functions"].keys()))
