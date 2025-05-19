@@ -34,6 +34,16 @@ def abbreviate_wf_name(workflow_name: str):
     return workflow_name
 
 
+def abbreviate_wf_names_aggressive(workflows: list[str]):
+    new_names = []
+    for workflow in workflows:
+        # split each name by '_'
+        sections = workflow.split('_')
+        # take first letter from each section
+        new_name = ''.join([word[0] for word in sections])
+        new_names.append(new_name)
+    return  new_names
+
 # Annotate workflow deployment table using pandas
 @dataclass
 class WorkflowTable:
@@ -329,9 +339,16 @@ class DeploymentUML(DiagramUML):
 
 class PlotObjectives:
     def __init__(self, op: Optimization, wf: Workflows, pb: Problem):
+        time_divisor = 1
+        ratio_time_cost = op.obj_latency.getValue() + op.obj_time.getValue()\
+                          / op.obj_transfer.getValue() + op.obj_ram.getValue()
+        if ratio_time_cost > 1000:
+            time_divisor = 1000
+
         self.total_objective = op.obj.getValue()
         self.main_objectives = {"latency": op.obj_latency.getValue(),
-                                "time": op.obj_time.getValue(), #/ 1000,
+                                "time/"+str(time_divisor): op.obj_time.getValue() / time_divisor,
+                                "startup": op.obj_startup.getValue(),
                                 "transfer": op.obj_transfer.getValue(),
                                 "ram": op.obj_ram.getValue()}
 
@@ -375,15 +392,19 @@ class PlotObjectives:
         plt.text(x=-1, y=-1.2, s=f"Total: {self.total_objective:.3f}, Weights: {op.w_1:.3f}, {op.w_2:.3f}")
         plt.savefig(f"{SAVE_PATH}objectives_pie.png")
 
+        workflows_names = self.workflows_names
+        if np.mean([len(wf_name) for wf_name in self.workflows_names]) > 7:
+            workflows_names = abbreviate_wf_names_aggressive(workflows=self.workflows_names)
+
         # subplot of the 4 quad objectives
         self.fig, self.ax = plt.subplots(2, 2)
-        self.ax[0, 0].bar(x=self.workflows_names, height=self.workflows_latency)
+        self.ax[0, 0].bar(x=workflows_names, height=self.workflows_latency)
         self.ax[0, 0].set_title("Workflows' Total Latency [s]")
-        self.ax[0, 1].bar(x=self.workflows_names, height=self.workflows_time)
+        self.ax[0, 1].bar(x=workflows_names, height=self.workflows_time)
         self.ax[0, 1].set_title("Workflows' Total Time [s]")
-        self.ax[1, 0].bar(x=self.workflows_names, height=self.workflows_transfer)
+        self.ax[1, 0].bar(x=workflows_names, height=self.workflows_transfer)
         self.ax[1, 0].set_title("Workflows' Data Transfer Cost [$]")
-        self.ax[1, 1].bar(x=self.workflows_names, height=self.workflows_ram)
+        self.ax[1, 1].bar(x=workflows_names, height=self.workflows_ram)
         self.ax[1, 1].set_title("Workflows' Running Cost [$]")
         self.fig.tight_layout()
         self.fig.savefig(f"{SAVE_PATH}wf_objectives.png")
