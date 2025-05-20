@@ -42,7 +42,8 @@ def abbreviate_wf_names_aggressive(workflows: list[str]):
         # take first letter from each section
         new_name = ''.join([word[0] for word in sections])
         new_names.append(new_name)
-    return  new_names
+    return new_names
+
 
 # Annotate workflow deployment table using pandas
 @dataclass
@@ -340,23 +341,27 @@ class DeploymentUML(DiagramUML):
 class PlotObjectives:
     def __init__(self, op: Optimization, wf: Workflows, pb: Problem):
         time_divisor = 1
-        ratio_time_cost = op.obj_latency.getValue() + op.obj_time.getValue()\
+        ratio_time_cost = op.obj_latency.getValue() + op.obj_time.getValue() \
                           / op.obj_transfer.getValue() + op.obj_ram.getValue()
         if ratio_time_cost > 1000:
             time_divisor = 1000
 
+        # format to 3 decimal points or scientific if zero
+        format_float = lambda x: f"{x:.3e}" if x != 0 and f"{x:.3f}" == "0.000" else f"{x:.3f}"
+
         self.total_objective = op.obj.getValue()
         self.main_objectives = {"latency": op.obj_latency.getValue(),
-                                "time/"+str(time_divisor): op.obj_time.getValue() / time_divisor,
+                                "time/" + str(time_divisor): op.obj_time.getValue() / time_divisor,
                                 "startup": op.obj_startup.getValue(),
                                 "transfer": op.obj_transfer.getValue(),
-                                "ram": op.obj_ram.getValue()}
+                                "ram": op.obj_ram.getValue(),
+                                "control": op.obj_control.getValue()}
 
         # print some data
         print()
         print(f'Objective: {self.total_objective:.3f}')
         objs = self.main_objectives
-        [print(f'{key}: {value:.3f}') for key, value in objs.items()]
+        [print(f'{key}: {format_float(value)}') for key, value in objs.items()]
 
         # Get workflow objective costs
         self.workflows_names = [abbreviate_wf_name(workflow) for workflow in wf.names_workflows]
@@ -369,7 +374,7 @@ class PlotObjectives:
             workflow_time = 0
             workflow_transfer = 0
             workflow_ram = 0
-            for function in range(len(wf.names_funs[workflow])-1):
+            for function in range(len(wf.names_funs[workflow]) - 1):
                 function_latency = []
                 function_time = []
                 for nd_send in range(pb.num_nodes):
