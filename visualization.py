@@ -352,9 +352,10 @@ class PlotObjectives:
         self.total_objective = op.obj.getValue()
         self.main_objectives = {"latency": op.obj_latency.getValue(),
                                 "time/" + str(time_divisor): op.obj_time.getValue() / time_divisor,
-                                "startup": op.obj_startup.getValue(),
+                                "startup_time": op.obj_startup_time.getValue(),
                                 "transfer": op.obj_transfer.getValue(),
                                 "ram": op.obj_ram.getValue(),
+                                "startup_cost": op.obj_startup_cost.getValue(),
                                 "control": op.obj_control.getValue()}
 
         # print some data
