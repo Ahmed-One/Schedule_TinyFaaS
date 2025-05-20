@@ -21,6 +21,7 @@ class Workflows:
         self.funs_persistent = {}
         self.funs_temp = {}
         self.funs_time_limited = {}
+        self.funs_control_rate = {}
         num_workflow_funs = []
 
         for wi, workflow in enumerate(workflows.values()):
@@ -49,7 +50,7 @@ class Workflows:
                 if "time_limit" in fun_info:
                     self.funs_time_limited[(wi, fi)] = fun_info["time_limit"]
                 if "control_rate" in fun_info:
-                    self.funs_time_limited[(wi, fi)] = fun_info["control_rate"]
+                    self.funs_control_rate[(wi, fi)] = fun_info["control_rate"]
 
             # store the number of functions in a workflow
             num_workflow_funs.append(len(workflow["functions"].keys()))
