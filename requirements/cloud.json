@@ -4,8 +4,8 @@
       "pricing_RAM": 2.5e-06,
       "pricing_StartRequest": 4e-07,
       "pricing_Storage_Transfer": {
-        "upload": 0.02,
-        "download":0.02
+        "upload": 0.00,
+        "download":0.12
       },
       "estimated_latency": 0.3,
       "p_factor": 0.9,
