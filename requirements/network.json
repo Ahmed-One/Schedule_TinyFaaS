@@ -1,7 +1,7 @@
 {
   "latency": 0.01,
   "rate_down": 0.8,
-  "rate_up": 0.1,
+  "rate_up": 0.4,
   "nodes": {
     "node-0":{
       "ram": 4,
