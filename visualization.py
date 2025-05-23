@@ -45,6 +45,11 @@ def abbreviate_wf_names_aggressive(workflows: list[str]):
     return new_names
 
 
+def abbreviate_node_names(nodes: list):
+    n = [name.replace("Node-", "Nd") for name in nodes]
+    return [name.replace("Google", "Ggl") for name in n]
+
+
 # Annotate workflow deployment table using pandas
 @dataclass
 class WorkflowTable:
@@ -341,8 +346,8 @@ class DeploymentUML(DiagramUML):
 class PlotObjectives:
     def __init__(self, op: Optimization, wf: Workflows, pb: Problem):
         time_divisor = 1
-        ratio_time_cost = op.obj_latency.getValue() + op.obj_time.getValue() \
-                          / op.obj_transfer.getValue() + op.obj_ram.getValue()
+        ratio_time_cost = (op.obj_latency.getValue() + op.obj_time.getValue()) \
+                          / (op.obj_transfer.getValue() + op.obj_ram.getValue())
         if ratio_time_cost > 1000:
             time_divisor = 1000
 
@@ -370,11 +375,14 @@ class PlotObjectives:
         self.workflows_time = []
         self.workflows_transfer = []
         self.workflows_ram = []
+        self.workflows_control = []  # The online control time
         for workflow in range(wf.num_workflows):
             workflow_latency = 0
             workflow_time = 0
             workflow_transfer = 0
             workflow_ram = 0
+            workflow_control = 0
+            workflow_control_flag = True
             for function in range(len(wf.names_funs[workflow]) - 1):
                 function_latency = []
                 function_time = []
@@ -382,6 +390,9 @@ class PlotObjectives:
                     for nd_recv in range(pb.num_nodes):
                         function_latency.append(op.obj_latency_details[workflow, function, nd_send, nd_recv].getValue())
                         workflow_transfer += op.obj_transfer_details[workflow, function, nd_send, nd_recv].getValue()
+                        if workflow_control_flag:
+                            workflow_control_flag = False
+                            workflow_control += op.T_f[workflow, nd_send, nd_recv].X
                     function_time.append(op.obj_time_details[workflow, function, nd_send].getValue())
                     workflow_ram += op.obj_ram_details[workflow, function, nd_send].getValue()
                 workflow_latency += max(function_latency)
@@ -390,6 +401,7 @@ class PlotObjectives:
             self.workflows_time.append(workflow_time)
             self.workflows_transfer.append(workflow_transfer)
             self.workflows_ram.append(workflow_ram)
+            self.workflows_control.append(workflow_control)
 
         # Pie Chart of totals
         plt.pie(x=list(self.main_objectives.values()), labels=list(self.main_objectives.keys()),
@@ -403,7 +415,7 @@ class PlotObjectives:
             workflows_names = abbreviate_wf_names_aggressive(workflows=self.workflows_names)
 
         # subplot of the 4 quad objectives
-        self.fig, self.ax = plt.subplots(2, 2)
+        self.fig, self.ax = plt.subplots(3, 2)
         self.ax[0, 0].bar(x=workflows_names, height=self.workflows_latency)
         self.ax[0, 0].set_title("Workflows' Total Latency [s]")
         self.ax[0, 1].bar(x=workflows_names, height=self.workflows_time)
@@ -412,8 +424,12 @@ class PlotObjectives:
         self.ax[1, 0].set_title("Workflows' Data Transfer Cost [$]")
         self.ax[1, 1].bar(x=workflows_names, height=self.workflows_ram)
         self.ax[1, 1].set_title("Workflows' Running Cost [$]")
+        self.ax[2, 0].bar(x=workflows_names, height=self.workflows_control)
+        self.ax[2, 0].set_title("Workflows' Online Control Latency [s]")
+        self.ax[2, 1].bar(x=abbreviate_node_names(pb.name_nodes), height=[op.T_s[i].X for i in op.T_s])
+        self.ax[2, 1].set_title("Node additional startup time [s]")
         self.fig.tight_layout()
-        self.fig.savefig(f"{SAVE_PATH}wf_objectives.png")
+        self.fig.savefig(f"{SAVE_PATH}wf_objectives.eps")
 
     def show_plots(self):
         self.fig.show()
