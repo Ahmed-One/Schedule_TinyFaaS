@@ -1,0 +1,429 @@
+{
+    "Batch_Reactor": {
+        "functions": {
+            "start": {
+                "location": "local",
+                "time": 0,
+                "data": 3.2e-08,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "online_mpc": {
+                "location": "any",
+                "time": 0.019,
+                "data": 3.2e-08,
+                "size": 0.33414348800000004,
+                "count": 1,
+                "run": "always",
+                "control_rate": 5
+            },
+            "generate_init_samples": {
+                "location": "any",
+                "time": 0.324,
+                "data": 0.0035751760000000002,
+                "size": 0.030000000000000002,
+                "count": 1,
+                "run": "temp"
+            },
+            "generate_samples": {
+                "location": "any",
+                "time": 0.1258156,
+                "data": 1.742474e-07,
+                "size": 1.315895979,
+                "count": 10000.0,
+                "run": "temp"
+            },
+            "train": {
+                "location": "cloud",
+                "time": 107.988,
+                "data": 2.1804e-05,
+                "size": 0.9316392960000001,
+                "count": 1,
+                "run": "temp"
+            },
+            "control": {
+                "location": "local",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "end": {
+                "location": "any",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            }
+        }
+    },
+    "Batch_Reactor_uncert": {
+        "functions": {
+            "start": {
+                "location": "local",
+                "time": 0,
+                "data": 3.2e-08,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "online_mpc": {
+                "location": "any",
+                "time": 0.008,
+                "data": 3.2e-08,
+                "size": 0.334553088,
+                "count": 1,
+                "run": "always",
+                "control_rate": 12
+            },
+            "generate_init_samples": {
+                "location": "any",
+                "time": 0.433,
+                "data": 0.005371432000000001,
+                "size": 0.030000000000000002,
+                "count": 1,
+                "run": "temp"
+            },
+            "generate_samples": {
+                "location": "any",
+                "time": 0.12226560000000002,
+                "data": 1.8301866670000003e-07,
+                "size": 1.341762219,
+                "count": 15000.0,
+                "run": "temp"
+            },
+            "train": {
+                "location": "cloud",
+                "time": 172.693,
+                "data": 2.1804e-05,
+                "size": 0.934957056,
+                "count": 1,
+                "run": "temp"
+            },
+            "control": {
+                "location": "local",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "end": {
+                "location": "any",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            }
+        }
+    },
+    "Contimuous_Stirred_Tank_Reactor": {
+        "functions": {
+            "start": {
+                "location": "local",
+                "time": 0,
+                "data": 3.2e-08,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "online_mpc": {
+                "location": "any",
+                "time": 0.005,
+                "data": 6.4e-08,
+                "size": 0.33436467200000003,
+                "count": 1,
+                "run": "always",
+                "control_rate": 20
+            },
+            "generate_init_samples": {
+                "location": "any",
+                "time": 0.279,
+                "data": 0.0032886720000000003,
+                "size": 0.030000000000000002,
+                "count": 1,
+                "run": "temp"
+            },
+            "generate_samples": {
+                "location": "any",
+                "time": 0.08538033333333334,
+                "data": 1.531838889e-07,
+                "size": 1.290027008,
+                "count": 9000.0,
+                "run": "temp"
+            },
+            "train": {
+                "location": "cloud",
+                "time": 85.177,
+                "data": 2.2208e-05,
+                "size": 0.932298752,
+                "count": 1,
+                "run": "temp"
+            },
+            "control": {
+                "location": "local",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "end": {
+                "location": "any",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            }
+        }
+    },
+    "Contimuous_Stirred_Tank_Reactor_uncert": {
+        "functions": {
+            "start": {
+                "location": "local",
+                "time": 0,
+                "data": 3.2e-08,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "online_mpc": {
+                "location": "any",
+                "time": 0.005,
+                "data": 6.4e-08,
+                "size": 0.33449984000000005,
+                "count": 1,
+                "run": "always",
+                "control_rate": 20
+            },
+            "generate_init_samples": {
+                "location": "any",
+                "time": 0.309,
+                "data": 0.0036551760000000004,
+                "size": 0.030000000000000002,
+                "count": 1,
+                "run": "temp"
+            },
+            "generate_samples": {
+                "location": "any",
+                "time": 0.0769567,
+                "data": 1.6356970000000003e-07,
+                "size": 1.289080832,
+                "count": 10000.0,
+                "run": "temp"
+            },
+            "train": {
+                "location": "cloud",
+                "time": 90.638,
+                "data": 2.2208e-05,
+                "size": 0.93353984,
+                "count": 1,
+                "run": "temp"
+            },
+            "control": {
+                "location": "local",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "end": {
+                "location": "any",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            }
+        }
+    },
+    "Disctrete_Oscillating_Masses": {
+        "functions": {
+            "start": {
+                "location": "local",
+                "time": 0,
+                "data": 3.2e-08,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "online_mpc": {
+                "location": "any",
+                "time": 0.001,
+                "data": 3.2e-08,
+                "size": 0.33424179200000004,
+                "count": 1,
+                "run": "always",
+                "control_rate": 100
+            },
+            "generate_init_samples": {
+                "location": "any",
+                "time": 0.186,
+                "data": 0.00214708,
+                "size": 0.030000000000000002,
+                "count": 1,
+                "run": "temp"
+            },
+            "generate_samples": {
+                "location": "any",
+                "time": 0.03108066666666667,
+                "data": 1.952023333e-07,
+                "size": 1.368580096,
+                "count": 6000.0,
+                "run": "temp"
+            },
+            "train": {
+                "location": "cloud",
+                "time": 14.676,
+                "data": 2.1804e-05,
+                "size": 0.926773248,
+                "count": 1,
+                "run": "temp"
+            },
+            "control": {
+                "location": "local",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "end": {
+                "location": "any",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            }
+        }
+    },
+    "Industrial_Poly": {
+        "functions": {
+            "start": {
+                "location": "local",
+                "time": 0,
+                "data": 8e-08,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "online_mpc": {
+                "location": "any",
+                "time": 0.04,
+                "data": 9.600000000000001e-08,
+                "size": 0.33454489600000004,
+                "count": 1,
+                "run": "always",
+                "control_rate": 2
+            },
+            "generate_init_samples": {
+                "location": "any",
+                "time": 0.375,
+                "data": 0.005075896000000001,
+                "size": 0.030000000000000002,
+                "count": 1,
+                "run": "temp"
+            },
+            "generate_samples": {
+                "location": "any",
+                "time": 5.14060725,
+                "data": 2.761291667e-07,
+                "size": 1.289363456,
+                "count": 12000.0,
+                "run": "temp"
+            },
+            "train": {
+                "location": "cloud",
+                "time": 45.347,
+                "data": 2.3812000000000002e-05,
+                "size": 1.012862976,
+                "count": 1,
+                "run": "temp"
+            },
+            "control": {
+                "location": "local",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "end": {
+                "location": "any",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            }
+        }
+    },
+    "Kinematic_Bicycle_Model": {
+        "functions": {
+            "start": {
+                "location": "local",
+                "time": 0,
+                "data": 3.2e-08,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "online_mpc": {
+                "location": "any",
+                "time": 0.003,
+                "data": 6.4e-08,
+                "size": 0.333848576,
+                "count": 1,
+                "run": "always",
+                "control_rate": 33
+            },
+            "generate_init_samples": {
+                "location": "any",
+                "time": 0.395,
+                "data": 0.004761896000000001,
+                "size": 0.030000000000000002,
+                "count": 1,
+                "run": "temp"
+            },
+            "generate_samples": {
+                "location": "any",
+                "time": 0.7936663076923077,
+                "data": 1.548384615e-07,
+                "size": 1.3673431040000001,
+                "count": 13000.0,
+                "run": "temp"
+            },
+            "train": {
+                "location": "cloud",
+                "time": 103.801,
+                "data": 2.2208e-05,
+                "size": 0.9317130240000001,
+                "count": 1,
+                "run": "temp"
+            },
+            "control": {
+                "location": "local",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            },
+            "end": {
+                "location": "any",
+                "time": 0,
+                "data": 0,
+                "size": 0,
+                "count": 1,
+                "run": "temp"
+            }
+        }
+    }
+}
