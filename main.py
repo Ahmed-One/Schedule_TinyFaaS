@@ -5,18 +5,22 @@ from visualization import WorkflowsTable, DeploymentUML, WorkflowsUML, NetworkUM
 
 def run():
     # Parse the JSON data
-    workflows = Workflows(datapath="requirements//workflows.json")
+    workflows = Workflows(datapath="requirements//workflows_DOMPC.json")
     network = LocalNetwork(datapath="requirements//network.json")
     cloud = CloudsInfo(datapath="requirements//cloud.json")
 
     # Check if enough tinyFaaS nnodes are available for the amount of workflows
     check_network_validity(num_workflows=workflows.num_workflows, num_tiny=network.num)
 
-    # Create problem parameters and optimize the for the solution
+    # report dictionary for recording solve statistics
+    report = {}
+
+    # Create problem parameters and optimize for the solution
     problem = Problem(wf=workflows, net=network, cld=cloud)
-    op = Optimizer7(wf=workflows, net=network, pb=problem)
-    op.w_1 = 1
-    op.w_2 = 470000
+    op = Optimizer4(wf=workflows, net=network, pb=problem, report=report)
+    op.normalize_weights_simple(wf=workflows, pb=problem)
+    # op.w_1 = 1
+    # op.w_2 = 1  # 470000
     op.setup()
     op.solve()
     assert op.model.Status != GRB.INFEASIBLE, "Model is Infeasible!"
@@ -38,6 +42,8 @@ def run():
 
     assigned_nodes_diagram = DeploymentUML(wf=workflows, net=network, cld=cloud, data=results)
     assigned_nodes_diagram.code_diagram()
+
+    [print(f"{item[0]}: {item[1]}") for item in report.items()]
 
     objectives_plot = PlotObjectives(op=op, wf=workflows, pb=problem)
     objectives_plot.show_plots()
