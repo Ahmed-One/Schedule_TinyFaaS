@@ -7,8 +7,9 @@ from creation import *
 
 
 class Optimization:
-    def __init__(self, var_dim: tuple):
+    def __init__(self, var_dim: tuple, report: dict):
         self.model = Model("TinyFaaS-Schedule")
+        self.report = report
         self.var_dim = var_dim
         self.type = GRB.INTEGER
         self.P = self.model.addVars(*self.var_dim, vtype=self.type, name="P")
@@ -27,7 +28,11 @@ class Optimization:
         self.obj_time_details: {LinExpr} = {}  # Function run time categorized
         self.obj_ram_details: {LinExpr} = {}  # Function running cost categorized
 
-        self.obj_startup: LinExpr = 0 * LinExpr()  # objective for the startup time
+        self.obj_startup_time: LinExpr = 0 * LinExpr()  # objective for the startup time
+        self.obj_startup_cost: LinExpr = 0 * LinExpr()  # objective for the startup cost
+        self.obj_startup_cost_details: {LinExpr} = {}  # Startup cost categorized
+        self.obj_control: LinExpr = 0 * LinExpr()  # Objective monetary cost of online-control
+        self.obj_control_details: {LinExpr} = {}  # Online-control cost categorized
 
         # Objective function weights
         # w1 for latency and time, w2 for costs
@@ -40,7 +45,8 @@ class Optimization:
     # Sum up formulated objectives
     def sum_objectives(self):
         # expression for the total objective function
-        self.obj = self.w_1 * (self.obj_latency + self.obj_time) + self.w_2 * (self.obj_transfer + self.obj_ram)
+        self.obj = self.w_1 * (self.obj_latency + self.obj_time + self.obj_startup_time)\
+                   + self.w_2 * (self.obj_transfer + self.obj_ram + self.obj_startup_cost + self.obj_control)
         self.model.setObjective(self.obj, GRB.MINIMIZE)
 
     def normalize_weights(self, wf: Workflows, pb: Problem):
@@ -81,7 +87,24 @@ class Optimization:
         # self.model.params.NumericFocus = 3
         self.model.setParam("OutputFlag", 1)
         self.model.update()
+
+        # Get presolve statistics
+        self.report['init_vars'] = self.model.NumVars
+        self.report['init_const'] = self.model.NumConstrs
+        presolved_model = self.model.presolve()
+        self.report['presolve_vars'] = presolved_model.NumVars
+        self.report['presolve_constr'] = presolved_model.NumConstrs
+
         self.model.optimize()
+
+        # Get solve statistics
+        self.report['num_vars'] = self.model.NumVars
+        self.report['num_constr'] = self.model.NumConstrs
+        self.report['num_GenConstr'] = self.model.NumGenConstrs
+        self.report['runtime'] = self.model.Runtime
+        self.report['simplex_iterations'] = self.model.IterCount
+        self.report['BranchnBound_nodes'] = self.model.NodeCount
+        self.report['Optimality_Gap'] = self.model.MIPGap
 
     # Constraint formulation methods
 
@@ -95,7 +118,8 @@ class Optimization:
         """
         for workflow in range(wf.num_workflows):
             for function in wf.funs_local[workflow]:
-                self.model.addConstr(quicksum(self.P[workflow, function, node] for node in range(net.num)) == 1,
+                self.model.addConstr(quicksum(self.P[workflow, function, node] for node in range(net.num))
+                                     == wf.funs_counts[workflow, function],
                                      name='local-function-constraint')
 
     def constrain_to_cloud_nodes(self, wf: Workflows, net: LocalNetwork):
@@ -158,9 +182,9 @@ class Optimization:
 # ======================================================================================================================
 # Initial formulation. P is binary. See thesis Ch. 05
 class Optimizer1(Optimization):
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report:dict):
         self.var_dim = (wf.num_workflows, wf.num_funs, pb.num_nodes)  # P_n,m,i
-        super().__init__(var_dim=self.var_dim)
+        super().__init__(var_dim=self.var_dim, report=report)
 
         self.type = GRB.BINARY
         self.P = self.model.addVars(*self.var_dim, vtype=self.type, name="P")
@@ -199,11 +223,15 @@ class Optimizer1(Optimization):
                     self.obj_time += obj_time
 
                     obj_ram = self.P[workflow, function, node] * pb.C[workflow, function, node]\
-                              * wf.funs_counts[workflow, function] + pb.C_s[workflow, function, node]
+                              * wf.funs_counts[workflow, function]
                     self.obj_ram += obj_ram
+
+                    obj_startup_cost = pb.C_s[workflow, function, node]
+                    self.obj_startup_cost += obj_startup_cost
 
                     self.obj_time_details[workflow, function, node] = obj_time
                     self.obj_ram_details[workflow, function, node] = obj_ram
+                    self.obj_startup_cost_details[workflow, function, node] = obj_startup_cost
 
         # Constraints
 
@@ -348,16 +376,13 @@ class Optimizer2(Optimization):
 # Redefine Occupation variables as Optimizer
 # Non-linear expressions used
 class Optimizer4(Optimization):
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report: dict):
         self.var_dim = (wf.num_workflows, wf.num_funs, pb.num_nodes)  # P_n,m,i
-        super().__init__(var_dim=self.var_dim)
+        super().__init__(var_dim=self.var_dim, report=report)
 
         # A variable representing the fraction of function n,m data to be sent along edge i,j
         # d_n,m,i,j := (1 / count_n,m) * Pn,m,i * P_n,m+1,j
         self.d = self.model.addVars(*self.var_dim, pb.num_nodes, vtype=GRB.CONTINUOUS, name="d")
-
-        # A variable representing the startup time
-        self.U = self.model.addVars(wf.num_workflows, pb.num_nodes, vtype=GRB.CONTINUOUS, name="U")
 
         self.wf, self.net, self.pb = wf, net, pb
 
@@ -366,9 +391,10 @@ class Optimizer4(Optimization):
 
         # Formulate objective function
 
-        self.formulate_objective_latency_n_transfer_loop(
-            expression_latency_n_transfer=self.formulate_objective_latency_n_transfer)
-        self.formulate_objective_time_n_ram_loop(expression_time_n_ram=self.formulate_objective_time_n_ram)
+        self.formulate_objective_loop_nmij(
+            expression_nmij=self.formulate_objective_latency_n_transfer)
+        self.formulate_objective_loop_nmi(expression_nmi=self.formulate_objective_time_n_ram)
+        self.formulate_cost_online_control(wf=wf, pb=pb)
 
         # Constraints
 
@@ -376,9 +402,10 @@ class Optimizer4(Optimization):
         self.constrain_to_cloud_nodes(wf=wf, net=net)
         self.constrain_to_function_count(wf=wf, pb=pb)
         self.constrain_to_ram_limit_no_temps(wf=wf, pb=pb)
+        self.constrain_startup_time(wf=wf, pb=pb)
+        # self.constrain_to_ram_limit(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.formulate_d()
-        self.formulate_startup_time(wf=wf, pb=pb)
 
     def formulate_d(self):
         wf, pb = self.wf, self.pb
@@ -392,26 +419,12 @@ class Optimizer4(Optimization):
                                              * self.P[workflow, function, node_sending]
                                              * self.P[workflow, function + 1, node_receiving])
 
-    # Add startup time as an objective. see section 3.5.3 in thesis
-    def formulate_startup_time(self, wf: Workflows, pb:Problem):
-        for workflow in range(wf.num_workflows):
-            for node in range(pb.num_nodes):
-                self.model.addConstr(self.U[workflow, node] >= quicksum([self.P[workflow, function, node]
-                                                                         * (wf.funs_data[workflow, function]
-                                                                            + wf.funs_sizes[workflow, function])
-                                                                         - pb.ram_limits[node]
-                                                                         for function in range(wf.num_funs)]))
-                self.model.addConstr(self.U[workflow, node] >= 0)
-
-                self.obj_startup += self.U[workflow, node]
-        self.obj += self.obj_startup
-
-    def formulate_objective_latency_n_transfer_loop(self, expression_latency_n_transfer: callable):
+    def formulate_objective_loop_nmij(self, expression_nmij: callable):
         """
         Loop over edges for formulating latency, and data transfer cost. Takes callback functions for execution
         within the loop. Callback functions must return a gurobipy.GenExpr.
 
-        :param expression_latency_n_transfer: (callable) callback function
+        :param expression_nmij: (callable) callback function
                for formulating edge-level latency and data transfer cost objectives
         :return: None
         """
@@ -427,7 +440,7 @@ class Optimizer4(Optimization):
                     for nd_recv in range(pb.num_nodes):
                         index = (workflow, function, nd_send, nd_recv)
 
-                        obj_latency, obj_transfer = expression_latency_n_transfer(index)
+                        obj_latency, obj_transfer = expression_nmij(index)
 
                         self.obj_transfer += obj_transfer
 
@@ -435,12 +448,12 @@ class Optimizer4(Optimization):
                         self.obj_transfer_details[workflow, function, nd_send, nd_recv] = obj_transfer
                 self.obj_latency += self.obj_latency_max[workflow, function]
 
-    def formulate_objective_time_n_ram_loop(self, expression_time_n_ram: callable):
+    def formulate_objective_loop_nmi(self, expression_nmi: callable):
         """
         Loop over edges for formulating time, and data execution costs. Takes callback functions for execution
         within the loop. Callback functions must return a gurobipy.GenExpr.
 
-        :param expression_time_n_ram: (callable) callback function for formulating
+        :param expression_nmi: (callable) callback function for formulating
                edge-level time and data execution cost objectives
         :return: None
         """
@@ -455,12 +468,14 @@ class Optimizer4(Optimization):
                 for node in range(pb.num_nodes):
                     index = (workflow, function, node)
 
-                    obj_time, obj_ram = expression_time_n_ram(index)
+                    obj_time, obj_ram, obj_startup_cost = expression_nmi(index)
 
                     self.obj_ram += obj_ram
+                    self.obj_startup_cost += obj_startup_cost
 
                     self.obj_time_details[workflow, function, node] = obj_time + (0 * LinExpr())
                     self.obj_ram_details[workflow, function, node] = obj_ram
+                    self.obj_startup_cost_details[workflow, function, node] = obj_startup_cost
                 self.obj_time += self.obj_time_max[workflow, function]
 
     def formulate_objective_latency_n_transfer(self, index: tuple):
@@ -493,9 +508,33 @@ class Optimizer4(Optimization):
         obj_time = pb.T[index]
         self.model.addConstr(self.obj_time_max[workflow, function] >= pb.T[index])
 
-        obj_ram = self.P[index] * (pb.C[index] + pb.C_s[index])
+        obj_ram = self.P[index] * pb.C[index]
 
-        return obj_time, obj_ram
+        obj_startup_cost = self.P[index] * pb.C_s[index]
+
+        return obj_time, obj_ram, obj_startup_cost
+
+    def constrain_startup_time(self, wf: Workflows, pb: Problem):
+        """
+        Create and constrain a variable that pertains to startup time when temporary
+        functions overflow local node capacity and have to be loaded from disk.
+        See subsection about startup time in chapter 3 of thesis
+        :param wf: (Workflows object)
+        :param pb: (Problem object)
+        :return: None
+        """
+
+        self.T_s = self.model.addVars(pb.num_nodes, vtype=GRB.CONTINUOUS)
+
+        # for workflow in range(wf.num_workflows):
+        for node in range(pb.num_nodes):
+            self.model.addConstr(self.T_s[node] >= pb.taus[node] *
+                                 quicksum([self.P[workflow, function, node] * (wf.funs_sizes[workflow, function]
+                                                                               + wf.funs_data[workflow, function])
+                                           for workflow in range(wf.num_workflows) for function in range(wf.num_funs)])
+                                 - pb.ram_limits[node])
+            self.model.addConstr(self.T_s[node] >= 0)
+            self.obj_startup_time += self.T_s[node]
 
     def constrain_to_ram_limit_no_temps(self, wf: Workflows, pb: Problem):
         """
@@ -527,18 +566,38 @@ class Optimizer4(Optimization):
                 sum_max_wf_ram += self.X[workflow, nd]
             self.model.addConstr(sum_max_wf_ram + sum_fn_pers_ram <= pb.ram_limits[nd], name='ram-limit-constraint')
 
+    def formulate_cost_online_control(self, wf: Workflows, pb: Problem):
+        # Cost of online-control functions
+        for workflow in range(wf.num_workflows):
+            for function in range(wf.num_funs):
+                # Check if function is time-limited
+                if (workflow, function) in wf.funs_control_rate:
+                    processing = quicksum([self.P[workflow, function, nd_f] * pb.C[workflow, function, nd_f]
+                                           * pb.T[workflow, function, nd_f] for nd_f in range(pb.num_nodes)])
+                    transfer = quicksum([pb.T[workflow, function, nd_f]
+                                         * wf.funs_control_rate[workflow, function]\
+                                         * ( (self.d[workflow, function, nd_prev, nd_f]
+                                              * pb.D[workflow, function, nd_prev, nd_f])
+                                             + (self.d[workflow, function, nd_f, nd_prev]
+                                                * pb.D[workflow, function, nd_f, nd_prev]) )
+                                         for nd_prev in range(pb.num_nodes) for nd_f in range(pb.num_nodes)])
+                    cost_control = processing + transfer
+                    self.obj_control += cost_control
+                    self.obj_control_details[workflow, function] = cost_control
+
     def constrain_to_time_limit(self, wf: Workflows, pb: Problem):
+        # T_f variable is the sum of time to receive, process and send data by f to f-1
+        # Assumption!! BOTH f and f-1 are single-instance functions, NOT parallelized
+        self.T_f = self.model.addVars(*(wf.num_workflows, pb.num_nodes, pb.num_nodes),
+                                      vtype=GRB.CONTINUOUS, name='T_limited')
+
         # Constrain time-limited functions
         for workflow in range(wf.num_workflows):
             for function in range(wf.num_funs):
                 # Check if function is time-limited
-                if (workflow, function) in wf.funs_time_limited:
-                    time_limit = wf.funs_time_limited[(workflow, function)]
-                    # T_f variable is the sum of time to receive, process and send data by f to f-1
-                    # Assumption!! BOTH f and f-1 are single-instance functions, NOT parallelized
-                    T_f = self.model.addVars(*(pb.num_nodes, pb.num_nodes), vtype=GRB.CONTINUOUS, name='T_limited')
-                    latency_in = 0 * LinExpr()
-                    latency_out = 0 * LinExpr()
+                if (workflow, function) in wf.funs_control_rate:
+                    # time_limit = wf.funs_time_limited[(workflow, function)]
+                    time_limit = 1 / wf.funs_control_rate[(workflow, function)]
                     for nd_prev in range(pb.num_nodes):  # node of f - 1
                         for nd_f in range(pb.num_nodes):  # node of f
                             latency_in = self.d[workflow, function - 1, nd_prev, nd_f] \
@@ -548,9 +607,9 @@ class Optimizer4(Optimization):
                             time_execution = pb.T[workflow, function, nd_f]
                             total_time = latency_in + time_execution + latency_out
                             # T_f is the total time
-                            self.model.addConstr(T_f[nd_prev, nd_f] == total_time)
+                            self.model.addConstr(self.T_f[workflow, nd_prev, nd_f] == total_time)
                             # T_f should be less than time limit
-                            self.model.addConstr(T_f[nd_prev, nd_f] <= time_limit)
+                            self.model.addConstr(self.T_f[workflow, nd_prev, nd_f] <= time_limit)
 
 
 # ======================================================================================================================
@@ -559,9 +618,9 @@ class Optimizer4(Optimization):
 
 # Linearize d_n,m,i,j from Optimizer4
 class Optimizer5(Optimizer4):
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report: dict):
         # Use all properties of Optimizer4
-        super().__init__(wf=wf, net=net, pb=pb)
+        super().__init__(wf=wf, net=net, pb=pb, report=report)
 
         # Auxiliary variable w_n,m,i,j for linearizing d_n,m,i,j
         # d_n,m,i,j := (1 / count_n,m) * w_n,m,i,j
@@ -572,9 +631,10 @@ class Optimizer5(Optimizer4):
 
         # Formulate objective function
 
-        self.formulate_objective_latency_n_transfer_loop(
-            expression_latency_n_transfer=self.formulate_objective_latency_n_transfer)
-        self.formulate_objective_time_n_ram_loop(expression_time_n_ram=self.formulate_objective_time_n_ram)
+        self.formulate_objective_loop_nmij(
+            expression_nmij=self.formulate_objective_latency_n_transfer)
+        self.formulate_objective_loop_nmi(expression_nmi=self.formulate_objective_time_n_ram)
+        self.formulate_cost_online_control(wf=wf, pb=pb)
 
         # Constraints
 
@@ -583,9 +643,9 @@ class Optimizer5(Optimizer4):
         self.constrain_to_function_count(wf=wf, pb=pb)
         # self.constrain_to_ram_limit(wf=wf, pb=pb)
         self.constrain_to_ram_limit_no_temps(wf=wf, pb=pb)
+        self.constrain_startup_time(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.linearize_d()
-        self.formulate_startup_time(wf=wf, pb=pb)
 
     def linearize_d(self):
         wf, pb = self.wf, self.pb
@@ -653,9 +713,9 @@ def generate_breakpoints(max_value, num_log=10, num_lin=10):
 
 # Consecutive batches
 class Optimizer6(Optimizer5):
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report: dict):
         # Use all properties from Optimizer5
-        super().__init__(wf=wf, net=net, pb=pb)
+        super().__init__(wf=wf, net=net, pb=pb, report=report)
 
         # formulate batch vars
         self.formulate_batch_vars()
@@ -668,9 +728,10 @@ class Optimizer6(Optimizer5):
 
         # Formulate objective function
 
-        self.formulate_objective_latency_n_transfer_loop(
-            expression_latency_n_transfer=self.formulate_objective_latency_n_transfer)
-        self.formulate_objective_time_n_ram_loop(expression_time_n_ram=self.formulate_objective_time_n_ram)
+        self.formulate_objective_loop_nmij(
+            expression_nmij=self.formulate_objective_latency_n_transfer)
+        self.formulate_objective_loop_nmi(expression_nmi=self.formulate_objective_time_n_ram)
+        self.formulate_cost_online_control(wf=wf, pb=pb)
 
         # Constraints
 
@@ -678,10 +739,41 @@ class Optimizer6(Optimizer5):
         self.constrain_to_cloud_nodes(wf=wf, net=net)
         self.constrain_to_function_count(wf=wf, pb=pb)
         self.constrain_to_ram_limit_no_temps(wf=wf, pb=pb)
+        self.constrain_startup_time(wf=wf, pb=pb)
+        # self.constrain_to_ram_limit(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.formulate_d()
         self.constrain_batch_vars_nonlinear(wf=wf, pb=pb)
         self.constrain_y_deviation(wf=wf, net=net, pb=pb, relaxation=10)
+
+    # Add startup time as an objective. see section 3.5.3 in thesis
+    def constrain_startup_time(self, wf: Workflows, pb: Problem):
+        """
+        Create and constrain a variable that pertains to startup time when temporary
+        functions overflow local node capacity and have to be loaded from disk.
+        See subsection about startup time in chapter 3 of thesis
+        :param wf: (Workflows object)
+        :param pb: (Problem object)
+        :return: None
+        """
+
+        self.T_s = self.model.addVars(pb.num_nodes, vtype=GRB.CONTINUOUS)
+
+        # for workflow in range(wf.num_workflows):
+        for node in range(pb.num_nodes):
+            self.model.addConstr(self.T_s[node] >= pb.taus[node] *
+                                 quicksum( [ self.P[workflow, function, node] * (wf.funs_sizes[workflow, function]
+                                                                                 + wf.funs_data[workflow, function])
+                                             for workflow in range(wf.num_workflows) for function in range(wf.num_funs)
+                                             if wf.funs_counts[workflow, function] <= 1] ) - pb.ram_limits[node] )
+            self.model.addConstr(self.T_s[node] >= pb.taus[node] *
+                                 quicksum([self.x[workflow, function, node] * (wf.funs_sizes[workflow, function]
+                                                                               + wf.funs_data[workflow, function])
+                                           for workflow in range(wf.num_workflows) for function in range(wf.num_funs)
+                                           if wf.funs_counts[workflow, function] > 1]) - pb.ram_limits[node] )
+
+            self.model.addConstr(self.T_s[node] >= 0)
+            self.obj_startup_time += self.T_s[node]
 
     def constrain_to_ram_limit_no_temps(self, wf: Workflows, pb: Problem):
         # RAM usage is limited by the max-using temporary function in a workflow
@@ -714,6 +806,24 @@ class Optimizer6(Optimizer5):
                 sum_max_wf_ram += self.R[workflow, node]
             self.model.addConstr(sum_max_wf_ram + sum_fn_pers_ram <= pb.ram_limits[node],
                                  name='ram-limit-constraint')
+
+    def constrain_to_ram_limit(self, wf: Workflows, pb: Problem):
+        # RAM usage is limited by the total assigned functions
+        for node in range(pb.num_nodes):
+            # if function is not parallelizable
+            self.model.addConstr(
+                quicksum(self.P[workflow, function, node] * (wf.funs_data[workflow, function]
+                                                             + wf.funs_sizes[workflow, function])
+                         for function in range(wf.num_funs) for workflow in range(wf.num_workflows)
+                         if wf.funs_counts[workflow, function] <= 1) <= pb.ram_limits[node],
+                name='ram-limit-constraint_xy1')
+            # if parallelizable, then the number of parallel instances 'x' is the limiting variable
+            self.model.addConstr(
+                quicksum(self.x[workflow, function, node] * (wf.funs_data[workflow, function]
+                                                             + wf.funs_sizes[workflow, function])
+                         for function in range(wf.num_funs) for workflow in range(wf.num_workflows)
+                         if wf.funs_counts[workflow, function] > 1) <= pb.ram_limits[node],
+                name='ram-limit-constraint_xyc')
 
     def constrain_batch_vars_nonlinear(self, wf: Workflows, pb: Problem):
         for workflow in range(wf.num_workflows):
@@ -787,18 +897,21 @@ class Optimizer6(Optimizer5):
 
         workflow, function = index[0], index[1]
         wf, pb = self.wf, self.pb
-        obj_time = pb.T[index]
 
         if wf.funs_counts[workflow, function] <= 1:
             self.model.addConstr(self.obj_time_max[workflow, function] >= pb.T[index])
-            obj_ram = self.P[index] * (pb.C[index] + pb.C_s[index])
+            obj_time = pb.T[index]
+            obj_ram = self.P[index] * pb.C[index]
+            obj_startup_cost = self.P[index] * pb.C_s[index]
         else:
             self.model.addConstr(self.obj_time_max[workflow, function] >=
                                  pb.T[index] * self.y[index])
+            obj_time = pb.T[index] * self.y[index]
 
-            obj_ram = self.P[index] * pb.C[index] + self.x[index] * pb.C_s[index]
+            obj_ram = self.P[index] * pb.C[index]
+            obj_startup_cost = self.x[index] * pb.C_s[index]
 
-        return obj_time, obj_ram
+        return obj_time, obj_ram, obj_startup_cost
 
 
 # ======================================================================================================================
@@ -808,9 +921,9 @@ class Optimizer6(Optimizer5):
 
 # Consecutive batches linearized
 class Optimizer7(Optimizer6):
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report: dict):
         # Use all properties from Optimizer5
-        super().__init__(wf=wf, net=net, pb=pb)
+        super().__init__(wf=wf, net=net, pb=pb, report=report)
 
         self.wf, self.net, self.pb = wf, net, pb
 
@@ -821,9 +934,10 @@ class Optimizer7(Optimizer6):
 
         # Formulate objective function
 
-        self.formulate_objective_latency_n_transfer_loop(
-            expression_latency_n_transfer=self.formulate_objective_latency_n_transfer)
-        self.formulate_objective_time_n_ram_loop(expression_time_n_ram=self.formulate_objective_time_n_ram)
+        self.formulate_objective_loop_nmij(
+            expression_nmij=self.formulate_objective_latency_n_transfer)
+        self.formulate_objective_loop_nmi(expression_nmi=self.formulate_objective_time_n_ram)
+        self.formulate_cost_online_control(wf=wf, pb=pb)
 
         # Constraints
 
@@ -831,6 +945,8 @@ class Optimizer7(Optimizer6):
         self.constrain_to_cloud_nodes(wf=wf, net=net)
         self.constrain_to_function_count(wf=wf, pb=pb)
         self.constrain_to_ram_limit_no_temps(wf=wf, pb=pb)
+        self.constrain_startup_time(wf=wf, pb=pb)
+        # self.constrain_to_ram_limit(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.constrain_y_deviation(wf=wf, net=net, pb=pb, relaxation=10)
         self.linearize_d()
