@@ -8,6 +8,7 @@ class Problem:
     def __init__(self, wf: Workflows, net: LocalNetwork, cld: CloudsInfo):
         # some helpful data
         self.num_nodes = net.num + cld.num
+        self.name_nodes = [f"Node-{i}" for i in range(net.num)] + cld.names
         # The upload/download directionality is switched. For a local node sending to the cloud, that means that the
         # local node is uploading and the cloud is downloading, thereby applying cloud upload pricing, and vice, versa.
         self.prices_transfer_up = np.append(np.zeros(net.num), cld.prices_transfer_down)
