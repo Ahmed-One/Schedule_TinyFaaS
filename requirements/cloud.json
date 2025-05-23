@@ -1,5 +1,5 @@
 {
-  "google": {
+  "Google": {
       "project": "workflows-413409",
       "pricing_RAM": 2.5e-06,
       "pricing_StartRequest": 4e-07,
@@ -11,7 +11,7 @@
       "p_factor": 0.9,
       "tau": 0.5
   },
-  "aws": {
+  "AWS": {
       "region": "us-east-1",
       "pricing_RAM": 1.667e-05,
       "pricing_StartRequest": 2e-07,
