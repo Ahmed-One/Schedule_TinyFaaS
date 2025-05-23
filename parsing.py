@@ -20,7 +20,6 @@ class Workflows:
         self.funs_cloud = {}
         self.funs_persistent = {}
         self.funs_temp = {}
-        self.funs_time_limited = {}
         self.funs_control_rate = {}
         num_workflow_funs = []
 
@@ -47,8 +46,6 @@ class Workflows:
                     self.funs_persistent[wi].append(fi)
                 elif fun_info["run"] == "temp":
                     self.funs_temp[wi].append(fi)
-                if "time_limit" in fun_info:
-                    self.funs_time_limited[(wi, fi)] = fun_info["time_limit"]
                 if "control_rate" in fun_info:
                     self.funs_control_rate[(wi, fi)] = fun_info["control_rate"]
 
