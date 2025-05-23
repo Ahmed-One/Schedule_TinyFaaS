@@ -1,6 +1,7 @@
 # Visualize optimization results
 from dataclasses import dataclass, field
 import matplotlib.pyplot as plt
+import pickle as pkl
 import pandas as pd
 import numpy as np
 
@@ -430,6 +431,10 @@ class PlotObjectives:
         self.ax[2, 1].set_title("Node additional startup time [s]")
         self.fig.tight_layout()
         self.fig.savefig(f"{SAVE_PATH}wf_objectives.eps")
+
+        # Save the figure object to a pickle file
+        with open('wf_objectives.pkl', 'wb') as file:
+            pkl.dump((self.fig, self.ax), file)
 
     def show_plots(self):
         self.fig.show()
