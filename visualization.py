@@ -434,12 +434,12 @@ class PlotObjectives:
         self.fig.savefig(f"{SAVE_PATH}wf_objectives.eps")
 
         # Save the figure object to a pickle file
-        with open('wf_objectives.pkl', 'wb') as file:
+        with open(f'{SAVE_PATH}wf_objectives.pkl', 'wb') as file:
             pkl.dump((self.fig, self.ax), file)
 
         # Save optimization variables to a pickle file
         sol_vars = {var.VarName: var.X for var in op.model.getVars()}
-        with open('solution.pkl', 'rb') as file:
+        with open(f'{SAVE_PATH}solution_vars.pkl', 'wb') as file:
             pkl.dump(sol_vars, file)
 
     def show_plots(self):
