@@ -684,32 +684,6 @@ class Optimizer5(Optimizer4):
 # ======================================================================================================================
 
 
-# Function to generate breakpoints using a hybrid logarithmic-linear scale
-def generate_breakpoints(max_value, num_log=10, num_lin=10):
-    """
-    Generates breakpoints using a hybrid logarithmic-linear scale.
-
-    Parameters:
-        max_value (int): The upper bound for x and y.
-        num_log (int): Number of log-scale points.
-        num_lin (int): Number of linear-scale points.
-
-    Returns:
-        list: Sorted list of breakpoints.
-    """
-    log_space = np.logspace(0, np.log10(max_value / 10), num=num_log, base=10, dtype=int)
-    lin_space = np.linspace(log_space[-1], max_value, num=num_lin, dtype=int)
-
-    breakpoints = sorted(set(log_space.tolist() + lin_space.tolist()))  # Ensure uniqueness & sorting
-    breakpoints.insert(0, 0)
-    return breakpoints
-
-
-# ======================================================================================================================
-# ======================================================================================================================
-# ======================================================================================================================
-
-
 # Consecutive batches
 class Optimizer6(Optimizer5):
     def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
@@ -719,8 +693,11 @@ class Optimizer6(Optimizer5):
         # formulate batch vars
         self.formulate_batch_vars()
 
-        # flag to indicate that batch optimization
+        # flag to indicate that it is batch optimization
         self.flagBatch = True
+
+        # Y-deviation relaxation factor
+        self.relaxation_factor = 10
 
     def setup(self):
         wf, net, pb = self.wf, self.net, self.pb
@@ -743,7 +720,7 @@ class Optimizer6(Optimizer5):
         self.constrain_to_time_limit(wf=wf, pb=pb)
         self.formulate_d()
         self.constrain_batch_vars_nonlinear(wf=wf, pb=pb)
-        self.constrain_y_deviation(wf=wf, net=net, pb=pb, relaxation=10)
+        self.constrain_y_deviation(wf=wf, net=net, pb=pb)
 
     # Add startup time as an objective. see section 3.5.3 in thesis
     def constrain_startup_time(self, wf: Workflows, pb: Problem):
@@ -831,11 +808,11 @@ class Optimizer6(Optimizer5):
                     self.model.addConstr(self.P[workflow, function, node] ==
                                          self.x[workflow, function, node] * self.y[workflow, function, node])
 
-    def constrain_y_deviation(self, wf: Workflows, net: LocalNetwork, pb: Problem, relaxation=20):
+    def constrain_y_deviation(self, wf: Workflows, net: LocalNetwork, pb: Problem):
         # collect sets of different p_factors
         p_factors_set = set(pb.p_factors)
         p_factors_nodes = {p.item(): np.argwhere(p == pb.p_factors).flatten().tolist() for p in p_factors_set}
-        relaxation_factor = relaxation
+        relaxation_factor = self.relaxation_factor
         node_firsts_list = []
         worst_efficiency = min(p_factors_set)
         for workflow in range(wf.num_workflows):
@@ -918,6 +895,32 @@ class Optimizer6(Optimizer5):
 # ======================================================================================================================
 
 
+# Function to generate breakpoints using a hybrid logarithmic-linear scale
+def generate_breakpoints(max_value, num_log=10, num_lin=10):
+    """
+    Generates breakpoints using a hybrid logarithmic-linear scale.
+
+    Parameters:
+        max_value (int): The upper bound for x and y.
+        num_log (int): Number of log-scale points.
+        num_lin (int): Number of linear-scale points.
+
+    Returns:
+        list: Sorted list of breakpoints.
+    """
+    log_space = np.logspace(0, np.log10(max_value / 10), num=num_log, base=10, dtype=int)
+    lin_space = np.linspace(log_space[-1], max_value, num=num_lin, dtype=int)
+
+    breakpoints = sorted(set(log_space.tolist() + lin_space.tolist()))  # Ensure uniqueness & sorting
+    breakpoints.insert(0, 0)
+    return breakpoints
+
+
+# ======================================================================================================================
+# ======================================================================================================================
+# ======================================================================================================================
+
+
 # Consecutive batches linearized
 class Optimizer7(Optimizer6):
     def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
@@ -925,6 +928,12 @@ class Optimizer7(Optimizer6):
         super().__init__(wf=wf, net=net, pb=pb)
 
         self.wf, self.net, self.pb = wf, net, pb
+
+        # number of discretization points for x and y
+        self. n_breakpnts = 20
+
+        # Y-depth shortening factor
+        self.depth_factor = 10
 
     def setup(self):
         wf, net, pb = self.wf, self.net, self.pb
@@ -947,7 +956,7 @@ class Optimizer7(Optimizer6):
         self.constrain_startup_time(wf=wf, pb=pb)
         # self.constrain_to_ram_limit(wf=wf, pb=pb)
         self.constrain_to_time_limit(wf=wf, pb=pb)
-        self.constrain_y_deviation(wf=wf, net=net, pb=pb, relaxation=10)
+        self.constrain_y_deviation(wf=wf, net=net, pb=pb)
         self.linearize_d()
 
     def linearize_batch_vars(self):
@@ -970,9 +979,11 @@ class Optimizer7(Optimizer6):
                         # breakpoint generation
                         # different bounds for x, y for tighter constraint
                         self.x_vals[workflow, function, node] = \
-                            generate_breakpoints(max_value=wf.funs_counts[workflow, function])
+                            generate_breakpoints(max_value=wf.funs_counts[workflow, function],
+                                                 num_log=self.n_breakpnts, num_lin=self.n_breakpnts)
                         self.y_vals[workflow, function, node] = \
-                            generate_breakpoints(max_value=np.ceil(wf.funs_counts[workflow, function] / 10))
+                            generate_breakpoints(max_value=np.ceil(wf.funs_counts[workflow, function] / self.depth_factor),
+                                                 num_log=self.n_breakpnts, num_lin=self.n_breakpnts)
                         # Compute P = x * y at breakpoints
                         self.p_vals[workflow, function, node] = np.array(
                             [[xi * yi for yi in self.y_vals[workflow, function, node]]
