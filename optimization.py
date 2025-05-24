@@ -1022,11 +1022,10 @@ class Optimizer7(Optimizer6):
                                                       for j in range(len(self.y_vals[workflow, function, node]))),
                                              name="y_interp")
                         self.model.addConstr(self.P_pw[workflow, function, node] == quicksum(
-                            self.lambda_vars[workflow, function, node][i, j] * self.p_vals[workflow, function, node][
-                                i, j]
-                            for i in range(len(self.x_vals[workflow, function, node])) for j in
-                            range(len(self.y_vals[workflow, function, node]))),
-                                             name="P_interp")
+                            self.lambda_vars[workflow, function, node][i, j]
+                            * self.p_vals[workflow, function, node][i, j]
+                            for i in range(len(self.x_vals[workflow, function, node]))
+                            for j in range(len(self.y_vals[workflow, function, node]))), name="P_interp")
 
                         # SOS2 constraint: At most two adjacent lambda variables are nonzero
                         # Mostly not needed, refer to conversation with chatGPT to know more
