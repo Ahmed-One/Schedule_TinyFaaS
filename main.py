@@ -43,8 +43,6 @@ def run():
     assigned_nodes_diagram = DeploymentUML(wf=workflows, net=network, cld=cloud, data=results)
     assigned_nodes_diagram.code_diagram()
 
-    [print(f"{item[0]}: {item[1]}") for item in op.report.items()]
-
     objectives_plot = PlotObjectives(op=op, wf=workflows, pb=problem)
     objectives_plot.show_plots()
 

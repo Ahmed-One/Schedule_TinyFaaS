@@ -369,6 +369,7 @@ class PlotObjectives:
         print(f'Objective: {self.total_objective:.3f}')
         objs = self.main_objectives
         [print(f'{key}: {format_float(value)}') for key, value in objs.items()]
+        [print(f"{item[0]}: {item[1]}") for item in op.report.items()]
 
         # Get workflow objective costs
         self.workflows_names = [abbreviate_wf_name(workflow) for workflow in wf.names_workflows]
@@ -435,6 +436,11 @@ class PlotObjectives:
         # Save the figure object to a pickle file
         with open('wf_objectives.pkl', 'wb') as file:
             pkl.dump((self.fig, self.ax), file)
+
+        # Save optimization variables to a pickle file
+        sol_vars = {var.VarName: var.X for var in op.model.getVars()}
+        with open('solution.pkl', 'rb') as file:
+            pkl.dump(sol_vars, file)
 
     def show_plots(self):
         self.fig.show()
