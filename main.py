@@ -17,8 +17,10 @@ def run():
 
     # Create problem parameters and optimize for the solution
     problem = Problem(wf=workflows, net=network, cld=cloud)
-    op = Optimizer6(wf=workflows, net=network, pb=problem)
+    op = Optimizer7(wf=workflows, net=network, pb=problem)
     op.normalize_weights_simple(wf=workflows, pb=problem)
+    op.n_breakpnts = 30
+    op.depth_factor = 5
     # op.w_1 = 1
     # op.w_2 = 1  # 470000
     op.setup()
