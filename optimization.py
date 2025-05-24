@@ -7,9 +7,9 @@ from creation import *
 
 
 class Optimization:
-    def __init__(self, var_dim: tuple, report: dict):
+    def __init__(self, var_dim: tuple):
         self.model = Model("TinyFaaS-Schedule")
-        self.report = report
+        self.report = {}
         self.var_dim = var_dim
         self.type = GRB.INTEGER
         self.P = self.model.addVars(*self.var_dim, vtype=self.type, name="P")
@@ -184,7 +184,7 @@ class Optimization:
 class Optimizer1(Optimization):
     def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report:dict):
         self.var_dim = (wf.num_workflows, wf.num_funs, pb.num_nodes)  # P_n,m,i
-        super().__init__(var_dim=self.var_dim, report=report)
+        super().__init__(var_dim=self.var_dim)
 
         self.type = GRB.BINARY
         self.P = self.model.addVars(*self.var_dim, vtype=self.type, name="P")
@@ -376,9 +376,9 @@ class Optimizer2(Optimization):
 # Redefine Occupation variables as Optimizer
 # Non-linear expressions used
 class Optimizer4(Optimization):
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report: dict):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
         self.var_dim = (wf.num_workflows, wf.num_funs, pb.num_nodes)  # P_n,m,i
-        super().__init__(var_dim=self.var_dim, report=report)
+        super().__init__(var_dim=self.var_dim)
 
         # A variable representing the fraction of function n,m data to be sent along edge i,j
         # d_n,m,i,j := (1 / count_n,m) * Pn,m,i * P_n,m+1,j
@@ -487,12 +487,11 @@ class Optimizer4(Optimization):
         """
 
         workflow, function = index[0], index[1]
-        pb = self.pb
 
-        obj_latency = self.d[index] * pb.L[index]
-        self.model.addConstr(self.obj_latency_max[workflow, function] >= self.d[index] * pb.L[index])
+        obj_latency = self.d[index] * self.pb.L[index]
+        self.model.addConstr(self.obj_latency_max[workflow, function] >= self.d[index] * self.pb.L[index])
 
-        obj_transfer = self.d[index] * pb.D[index]
+        obj_transfer = self.d[index] * self.pb.D[index]
 
         return obj_latency, obj_transfer
 
@@ -618,9 +617,9 @@ class Optimizer4(Optimization):
 
 # Linearize d_n,m,i,j from Optimizer4
 class Optimizer5(Optimizer4):
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report: dict):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
         # Use all properties of Optimizer4
-        super().__init__(wf=wf, net=net, pb=pb, report=report)
+        super().__init__(wf=wf, net=net, pb=pb)
 
         # Auxiliary variable w_n,m,i,j for linearizing d_n,m,i,j
         # d_n,m,i,j := (1 / count_n,m) * w_n,m,i,j
@@ -713,9 +712,9 @@ def generate_breakpoints(max_value, num_log=10, num_lin=10):
 
 # Consecutive batches
 class Optimizer6(Optimizer5):
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report: dict):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
         # Use all properties from Optimizer5
-        super().__init__(wf=wf, net=net, pb=pb, report=report)
+        super().__init__(wf=wf, net=net, pb=pb)
 
         # formulate batch vars
         self.formulate_batch_vars()
@@ -921,9 +920,9 @@ class Optimizer6(Optimizer5):
 
 # Consecutive batches linearized
 class Optimizer7(Optimizer6):
-    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem, report: dict):
+    def __init__(self, wf: Workflows, net: LocalNetwork, pb: Problem):
         # Use all properties from Optimizer5
-        super().__init__(wf=wf, net=net, pb=pb, report=report)
+        super().__init__(wf=wf, net=net, pb=pb)
 
         self.wf, self.net, self.pb = wf, net, pb
 

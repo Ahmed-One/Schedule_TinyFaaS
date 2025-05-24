@@ -17,7 +17,7 @@ def run():
 
     # Create problem parameters and optimize for the solution
     problem = Problem(wf=workflows, net=network, cld=cloud)
-    op = Optimizer4(wf=workflows, net=network, pb=problem, report=report)
+    op = Optimizer6(wf=workflows, net=network, pb=problem)
     op.normalize_weights_simple(wf=workflows, pb=problem)
     # op.w_1 = 1
     # op.w_2 = 1  # 470000
@@ -43,7 +43,7 @@ def run():
     assigned_nodes_diagram = DeploymentUML(wf=workflows, net=network, cld=cloud, data=results)
     assigned_nodes_diagram.code_diagram()
 
-    [print(f"{item[0]}: {item[1]}") for item in report.items()]
+    [print(f"{item[0]}: {item[1]}") for item in op.report.items()]
 
     objectives_plot = PlotObjectives(op=op, wf=workflows, pb=problem)
     objectives_plot.show_plots()
